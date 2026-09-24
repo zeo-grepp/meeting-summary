@@ -1,0 +1,40 @@
+// !$*UTF8*$!
+{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {
+000000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/App/MeetingAssistantApp.swift; sourceTree = "<group>";};
+000000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/App/MenuBarView.swift; sourceTree = "<group>";};
+000000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/Settings/SettingsView.swift; sourceTree = "<group>";};
+000000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/Settings/SettingsStore.swift; sourceTree = "<group>";};
+000000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/Settings/WatchedApplication.swift; sourceTree = "<group>";};
+000000000000000000000006 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/Notification/NotificationManager.swift; sourceTree = "<group>";};
+000000000000000000000007 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/SettingsStoreTests.swift; sourceTree = "<group>";};
+000000000000000000000008 = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = MeetingAssistant/Info.plist; sourceTree = "<group>";};
+000000000000000000000009 = {isa = PBXFileReference; explicitFileType = wrapper.application; path = MeetingAssistant.app; sourceTree = BUILT_PRODUCTS_DIR;};
+00000000000000000000000A = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = MeetingAssistantTests.xctest; sourceTree = BUILT_PRODUCTS_DIR;};
+00000000000000000000000B = {isa = PBXGroup; children = (000000000000000000000009,00000000000000000000000A); name = Products; sourceTree = "<group>";};
+00000000000000000000000C = {isa = PBXGroup; children = (000000000000000000000001,000000000000000000000002,000000000000000000000003,000000000000000000000004,000000000000000000000005,000000000000000000000006,000000000000000000000007,000000000000000000000008,00000000000000000000000B); sourceTree = "<group>";};
+00000000000000000000000D = {isa = XCBuildConfiguration; name = Debug; buildSettings = {SDKROOT = macosx; MACOSX_DEPLOYMENT_TARGET = 26.0; SWIFT_VERSION = 6.0; CLANG_ENABLE_MODULES = YES; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_TESTABILITY = YES;};};
+00000000000000000000000E = {isa = XCBuildConfiguration; name = Release; buildSettings = {SDKROOT = macosx; MACOSX_DEPLOYMENT_TARGET = 26.0; SWIFT_VERSION = 6.0; CLANG_ENABLE_MODULES = YES; SWIFT_COMPILATION_MODE = wholemodule; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";};};
+00000000000000000000000F = {isa = XCConfigurationList; buildConfigurations = (00000000000000000000000D,00000000000000000000000E); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
+000000000000000000000010 = {isa = PBXBuildFile; fileRef = 000000000000000000000001;};
+000000000000000000000011 = {isa = PBXBuildFile; fileRef = 000000000000000000000002;};
+000000000000000000000012 = {isa = PBXBuildFile; fileRef = 000000000000000000000003;};
+000000000000000000000013 = {isa = PBXBuildFile; fileRef = 000000000000000000000004;};
+000000000000000000000014 = {isa = PBXBuildFile; fileRef = 000000000000000000000005;};
+000000000000000000000015 = {isa = PBXBuildFile; fileRef = 000000000000000000000006;};
+000000000000000000000016 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (000000000000000000000010,000000000000000000000011,000000000000000000000012,000000000000000000000013,000000000000000000000014,000000000000000000000015); runOnlyForDeploymentPostprocessing = 0;};
+000000000000000000000017 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;};
+000000000000000000000018 = {isa = XCBuildConfiguration; name = Debug; buildSettings = {PRODUCT_NAME = "$(TARGET_NAME)"; CODE_SIGN_STYLE = Manual; CODE_SIGN_IDENTITY = "-"; ENABLE_APP_SANDBOX = NO; PRODUCT_BUNDLE_IDENTIFIER = local.meeting-summary.MeetingAssistant; INFOPLIST_FILE = MeetingAssistant/Info.plist; ENABLE_HARDENED_RUNTIME = YES; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks"; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_TESTABILITY = YES;};};
+000000000000000000000019 = {isa = XCBuildConfiguration; name = Release; buildSettings = {PRODUCT_NAME = "$(TARGET_NAME)"; CODE_SIGN_STYLE = Manual; CODE_SIGN_IDENTITY = "-"; ENABLE_APP_SANDBOX = NO; PRODUCT_BUNDLE_IDENTIFIER = local.meeting-summary.MeetingAssistant; INFOPLIST_FILE = MeetingAssistant/Info.plist; ENABLE_HARDENED_RUNTIME = YES; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks"; SWIFT_COMPILATION_MODE = wholemodule; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";};};
+00000000000000000000001A = {isa = XCConfigurationList; buildConfigurations = (000000000000000000000018,000000000000000000000019); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
+00000000000000000000001B = {isa = PBXNativeTarget; buildConfigurationList = 00000000000000000000001A; buildPhases = (000000000000000000000016,000000000000000000000017); buildRules = (); dependencies = (); name = MeetingAssistant; productName = MeetingAssistant; productReference = 000000000000000000000009; productType = "com.apple.product-type.application";};
+00000000000000000000001C = {isa = PBXBuildFile; fileRef = 000000000000000000000004;};
+00000000000000000000001D = {isa = PBXBuildFile; fileRef = 000000000000000000000005;};
+00000000000000000000001E = {isa = PBXBuildFile; fileRef = 000000000000000000000007;};
+00000000000000000000001F = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (00000000000000000000001C,00000000000000000000001D,00000000000000000000001E); runOnlyForDeploymentPostprocessing = 0;};
+000000000000000000000020 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;};
+000000000000000000000021 = {isa = XCBuildConfiguration; name = Debug; buildSettings = {PRODUCT_NAME = "$(TARGET_NAME)"; CODE_SIGN_STYLE = Manual; CODE_SIGN_IDENTITY = "-"; ENABLE_APP_SANDBOX = NO; PRODUCT_BUNDLE_IDENTIFIER = local.meeting-summary.MeetingAssistantTests; GENERATE_INFOPLIST_FILE = YES; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @loader_path/../Frameworks"; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_TESTABILITY = YES;};};
+000000000000000000000022 = {isa = XCBuildConfiguration; name = Release; buildSettings = {PRODUCT_NAME = "$(TARGET_NAME)"; CODE_SIGN_STYLE = Manual; CODE_SIGN_IDENTITY = "-"; ENABLE_APP_SANDBOX = NO; PRODUCT_BUNDLE_IDENTIFIER = local.meeting-summary.MeetingAssistantTests; GENERATE_INFOPLIST_FILE = YES; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @loader_path/../Frameworks"; SWIFT_COMPILATION_MODE = wholemodule; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";};};
+000000000000000000000023 = {isa = XCConfigurationList; buildConfigurations = (000000000000000000000021,000000000000000000000022); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
+000000000000000000000024 = {isa = PBXNativeTarget; buildConfigurationList = 000000000000000000000023; buildPhases = (00000000000000000000001F,000000000000000000000020); buildRules = (); dependencies = (); name = MeetingAssistantTests; productName = MeetingAssistantTests; productReference = 00000000000000000000000A; productType = "com.apple.product-type.bundle.unit-test";};
+000000000000000000000025 = {isa = PBXProject; attributes = {LastUpgradeCheck = 2700;}; buildConfigurationList = 00000000000000000000000F; compatibilityVersion = "Xcode 14.0"; developmentRegion = ko; knownRegions = (ko,en,Base); mainGroup = 00000000000000000000000C; productRefGroup = 00000000000000000000000B; projectDirPath = ""; projectRoot = ""; targets = (00000000000000000000001B,000000000000000000000024);};
+}; rootObject = 000000000000000000000025; }
