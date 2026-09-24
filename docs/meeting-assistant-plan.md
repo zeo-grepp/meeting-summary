@@ -88,7 +88,7 @@ Recorder → idle / starting / recording / stopping  ┘          ↓
 - **AppDetector**: NSWorkspace.runningApplications의 초기 값과 KVO 변경을 관찰하고 bundle ID로 설정과 교집합을 구한다. Apple 문서에서 launch notification은 LSUIElement/백그라운드 앱을 제외하므로, 임의의 앱을 선택할 수 있는 이번 요구에는 runningApplications KVO를 우선한다. 설정 변경도 즉시 반영한다. [Apple 근거](https://developer.apple.com/documentation/appkit/nsworkspace/runningapplications)
 - **MicrophoneDetector**: 위 HAL 속성만 관찰하고 전체 입력 상태를 내보낸다. 읽기 오류를 inactive로 바꾸지 않는다. 활성 프로세스가 확인되면 active, 모두 성공적으로 비활성이면 inactive, 활성 근거 없이 일부 조회가 실패하면 unknown으로 취급한다.
 - **DetectionCoordinator**: 회의 후보를 판단하는 유일한 위치다. `inactive → active && watchedApps 비어 있지 않음 && 녹음 시작/진행/종료 중 아님 && 알림 활성화 && cooldown 지남`일 때 후보를 생성한다. 초기 unknown→active는 시작 전환으로 간주하지 않는다. 앱 실행/설정 변경만으로 이미 활성 상태에 대한 알림을 만들지 않는다.
-- 초기 cooldown은 전역 10분으로 단순화한다. 알림 등록 성공 시 시작하고, 만료만으로 재알림하지 않는다. 새 inactive→active 전환이 필요하다. 이번만 무시는 해당 후보를 종료한다. 여러 감시 앱이 동시에 실행되어도 후보 알림은 하나다.
+- 초기 cooldown은 전역 1분으로 단순화한다. 알림 등록 성공 시 시작하고, 만료만으로 재알림하지 않는다. 새 inactive→active 전환이 필요하다. 이번만 무시는 해당 후보를 종료한다. 여러 감시 앱이 동시에 실행되어도 후보 알림은 하나다.
 - **NotificationManager**: 권한과 category/actions, 전달 오류, delegate를 관리한다. 제목은 “회의가 시작되었나요?”, 본문은 “Discord가 실행 중이며 오디오 입력 사용이 시작되었습니다.”로 표시한다. 특정 앱이 마이크를 사용했다는 귀속은 하지 않는다. `녹음 시작`과 `이번만 무시`를 등록한다. 본문 클릭은 앱을 열 뿐 녹음을 시작하지 않는다. [Apple 액션 문서](https://developer.apple.com/documentation/usernotifications/declaring-your-actionable-notification-types)
 - 알림 시작 액션과 메뉴바 수동 시작은 같은 녹음 진입점으로 연결한다. 시작 중 중복 요청은 무시하고, Recorder 시작 직전부터 감지 알림을 억제해 자체 입력 활성으로 재알림하지 않는다. 오래된 알림은 입력 종료 시 정리하며 응답 시 후보 유효성을 확인한다.
 - 상태/UI는 main actor에서 갱신하고 Core Audio callback은 전달만 한다. 각 Detector는 start/stop과 callback을 갖는 구체 타입으로 시작한다. 범용 signal bus, associatedtype 프로토콜, 별도 MeetingDetector 계층은 지금 만들지 않는다.
@@ -133,3 +133,11 @@ BrowserDetector, Calendar, application audio, scoring, 로그인 자동 실행�
 `macos/MeetingAssistant/`에 Xcode 앱과 설정 저장 테스트 target을 추가했다. 메뉴바, 앱 선택/삭제/활성화 저장, 프로젝트 경로 검증, 알림 권한 요청/조회까지 구현했다. 감지·녹음·Python 연동은 추가하지 않았다.
 
 Debug 빌드와 XCTest 2개가 통과했다. 앱 프로세스 실행도 확인했지만 UI 자동화의 앱 연결이 시간 초과되어 메뉴바/설정창과 실제 권한 허용·거부 화면은 확인하지 못했다. 실행법과 수동 검증 항목은 `macos/MeetingAssistant/README.md`에 기록했다.
+
+## Phase 2 진행 기록 — 2026-09-24
+
+실행 중인 감시 앱을 NSWorkspace KVO로, Core Audio 프로세스별 입력 활성 상태를 속성 listener로 관찰한다. 입력 비활성→활성 전환과 감시 앱 실행이 동시에 충족될 때만 알림을 보내며 전역 1분 쿨다운을 적용한다. 입력 종료·감시 앱 종료·설정 해제 시 기존 후보를 정리한다. 알림의 무시 액션은 후보를 닫고 시작 액션은 Phase 3 안내를 표시한다. 실제 녹음 상태로 전환하지 않는다.
+
+Xcode 실행과 XCTest 상태 전이 검증을 완료했다. Discord 음성 채널 종료·재연결에서 입력 상태 전환과 후보 알림 배너·소리를 확인했다. 알림 액션은 아직 수동 검증이 필요하다. 검증 절차는 `macos/MeetingAssistant/README.md`에 기록했다.
+
+후속 검증에서 Discord 입력을 Core Audio 일회성 조회는 활성(1)으로 보고했지만 앱의 속성 listener가 전환을 전달하지 않은 사례를 확인했다. 누락된 전환을 회복하도록 실행 중 2초 간격 재조회를 추가했다. 수정된 앱에서 음성 채널 재연결 시 입력 전환, 후보 알림 발송, 배너 표시를 확인했다.

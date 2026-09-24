@@ -1,13 +1,49 @@
 import Observation
 import UserNotifications
 
+private final class NotificationActionDelegate: NSObject, UNUserNotificationCenterDelegate {
+    var onAction: (@Sendable (String, String) -> Void)?
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .list, .sound])
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        onAction?(response.actionIdentifier, response.notification.request.identifier)
+        completionHandler()
+    }
+}
+
 @MainActor @Observable
 final class NotificationManager {
+    static let startAction = "START_RECORDING"
+    static let ignoreAction = "IGNORE_ONCE"
+    private static let category = "MEETING_CANDIDATE"
     private let center = UNUserNotificationCenter.current()
+    private let actionDelegate = NotificationActionDelegate()
+    var onAction: ((String, String) -> Void)?
     private(set) var authorizationStatus: UNAuthorizationStatus?
     private(set) var alertsEnabled = false
+    private(set) var soundsEnabled = false
     private(set) var isRequesting = false
     private(set) var errorMessage: String?
+
+    init() {
+        actionDelegate.onAction = { [weak self] action, identifier in
+            Task { @MainActor [weak self] in self?.onAction?(action, identifier) }
+        }
+        center.delegate = actionDelegate
+        center.setNotificationCategories([
+            UNNotificationCategory(identifier: Self.category, actions: [
+                UNNotificationAction(identifier: Self.startAction, title: "녹음 시작", options: [.foreground]),
+                UNNotificationAction(identifier: Self.ignoreAction, title: "이번만 무시", options: [])
+            ], intentIdentifiers: [])
+        ])
+    }
 
     var statusText: String {
         switch authorizationStatus {
@@ -25,6 +61,7 @@ final class NotificationManager {
         let settings = await center.notificationSettings()
         authorizationStatus = settings.authorizationStatus
         alertsEnabled = settings.alertSetting == .enabled
+        soundsEnabled = settings.soundSetting == .enabled
         if settings.authorizationStatus != .notDetermined { errorMessage = nil }
     }
 
@@ -34,10 +71,33 @@ final class NotificationManager {
         defer { isRequesting = false }
         errorMessage = nil
         do {
-            _ = try await center.requestAuthorization(options: [.alert])
+            _ = try await center.requestAuthorization(options: [.alert, .sound])
         } catch {
             errorMessage = "알림 권한 요청에 실패했습니다: \(error.localizedDescription)"
         }
         await refresh()
+    }
+
+    func postCandidate(appName: String) async -> String? {
+        await refresh()
+        guard authorizationStatus == .authorized, alertsEnabled else { return nil }
+        let content = UNMutableNotificationContent()
+        content.title = "회의가 시작되었나요?"
+        content.body = "\(appName)이 실행 중이며 오디오 입력 사용이 시작되었습니다."
+        content.sound = .default
+        content.categoryIdentifier = Self.category
+        let identifier = UUID().uuidString
+        do {
+            try await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
+            return identifier
+        } catch {
+            errorMessage = "회의 알림을 표시하지 못했습니다: \(error.localizedDescription)"
+            return nil
+        }
+    }
+
+    func removeCandidate(_ identifier: String) {
+        center.removePendingNotificationRequests(withIdentifiers: [identifier])
+        center.removeDeliveredNotifications(withIdentifiers: [identifier])
     }
 }

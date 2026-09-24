@@ -4,6 +4,7 @@ import Observation
 @MainActor @Observable
 final class SettingsStore {
     private let defaults: UserDefaults
+    @ObservationIgnored var onDetectionSettingsChange: (() -> Void)?
     var errorMessage: String?
 
     var watchedApplications: [WatchedApplication] {
@@ -13,13 +14,17 @@ final class SettingsStore {
             } catch {
                 errorMessage = "감시 앱 설정을 저장하지 못했습니다: \(error.localizedDescription)"
             }
+            onDetectionSettingsChange?()
         }
     }
     var projectRootPath: String {
         didSet { defaults.set(projectRootPath, forKey: "projectRootPath") }
     }
     var notificationsEnabled: Bool {
-        didSet { defaults.set(notificationsEnabled, forKey: "notificationsEnabled") }
+        didSet {
+            defaults.set(notificationsEnabled, forKey: "notificationsEnabled")
+            onDetectionSettingsChange?()
+        }
     }
 
     init(defaults: UserDefaults = .standard) {

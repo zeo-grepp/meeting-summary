@@ -3,12 +3,15 @@ import SwiftUI
 
 struct MenuBarView: View {
     let settings: SettingsStore
+    let detection: DetectionCoordinator
     @Environment(\.openSettings) private var openSettings
     @State private var errorMessage: String?
 
     var body: some View {
         Text("Meeting Assistant")
-        Text("회의 감지: 준비 중 (Phase 2)")
+        Text("회의 감지: \(detection.statusText)")
+        if let app = detection.runningApps.first { Text("감시 앱 실행 중: \(app.displayName)") }
+        if let message = detection.actionMessage { Text(message) }
         Text("녹음: 아직 지원하지 않음 (Phase 3)")
         Divider()
         Text("감시 대상으로 선택한 앱: \(settings.watchedApplications.filter(\.isEnabled).count)개")

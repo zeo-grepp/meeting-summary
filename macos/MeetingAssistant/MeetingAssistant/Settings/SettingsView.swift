@@ -9,7 +9,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section {
-                Text("감시 앱과 알림을 설정하세요. 자동 회의 감지와 녹음은 다음 단계에서 제공됩니다.")
+                Text("감시 앱과 알림을 설정하세요. 회의 가능성 감지는 작동 중이며 녹음은 다음 단계에서 제공됩니다.")
                     .foregroundStyle(.secondary)
             }
             Section("감시할 앱") {
@@ -50,6 +50,15 @@ struct SettingsView: View {
                         }
                     }
                 LabeledContent("macOS 알림 권한", value: notifications.statusText)
+                if notifications.authorizationStatus == .authorized {
+                    LabeledContent("알림 소리", value: notifications.soundsEnabled ? "허용됨" : "꺼짐 — 시스템 설정 > 알림에서 확인")
+                    if settings.notificationsEnabled && !notifications.soundsEnabled {
+                        Button("알림 소리 권한 요청") {
+                            Task { await notifications.requestAuthorization() }
+                        }
+                        .disabled(notifications.isRequesting)
+                    }
+                }
                 if settings.notificationsEnabled && notifications.authorizationStatus == .notDetermined {
                     Button("알림 권한 요청") {
                         Task { await notifications.requestAuthorization() }
