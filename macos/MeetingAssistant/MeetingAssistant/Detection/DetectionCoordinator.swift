@@ -1,9 +1,11 @@
 import AppKit
 import Foundation
 import Observation
+import UserNotifications
 
 @MainActor @Observable
 final class DetectionCoordinator {
+    let recorder = Recorder()
     private let settings: SettingsStore
     private let notifications: NotificationManager
     private let appDetector: AppDetector
@@ -11,6 +13,7 @@ final class DetectionCoordinator {
     private var lastNotificationAt: Date?
     private var activeCandidateID: String?
     private var notificationInFlight = false
+    private var recordingStartInFlight = false
     private(set) var runningApps: [WatchedApplication] = []
     private(set) var microphoneState: MicrophoneState = .unknown
     private(set) var isRunning = false
@@ -74,6 +77,7 @@ final class DetectionCoordinator {
         guard Self.shouldNotify(previous: previous, current: next,
                                 hasWatchedApp: !runningApps.isEmpty,
                                 enabled: settings.notificationsEnabled,
+                                recordingBusy: recorder.isBusy || recordingStartInFlight,
                                 lastNotificationAt: lastNotificationAt,
                                 now: Date()), !notificationInFlight else { return }
         let app = runningApps[0]
@@ -102,24 +106,45 @@ final class DetectionCoordinator {
     }
 
     static func shouldNotify(previous: MicrophoneState, current: MicrophoneState,
-                             hasWatchedApp: Bool, enabled: Bool,
+                             hasWatchedApp: Bool, enabled: Bool, recordingBusy: Bool = false,
                              lastNotificationAt: Date?, now: Date) -> Bool {
-        previous == .inactive && current == .active && hasWatchedApp && enabled
+        previous == .inactive && current == .active && hasWatchedApp && enabled && !recordingBusy
             && (lastNotificationAt.map { now.timeIntervalSince($0) >= 60 } ?? true)
+    }
+
+    func startRecording() {
+        guard !recorder.isBusy && !recordingStartInFlight else { return }
+        if let id = activeCandidateID { notifications.removeCandidate(id) }
+        activeCandidateID = nil
+        actionMessage = nil
+        recordingStartInFlight = true
+        Task {
+            defer { recordingStartInFlight = false }
+            do { try await recorder.start(in: settings.recordingsURL) }
+            catch {
+                actionMessage = error.localizedDescription
+                let alert = NSAlert()
+                alert.messageText = "녹음을 시작하지 못했습니다"
+                alert.informativeText = error.localizedDescription
+                NSApp.activate(ignoringOtherApps: true)
+                alert.runModal()
+            }
+        }
+    }
+
+    func stopRecording() {
+        do { try recorder.stop() }
+        catch { actionMessage = error.localizedDescription }
     }
 
     private func handleAction(_ action: String, identifier: String) {
         guard identifier == activeCandidateID,
-              action == NotificationManager.startAction || action == NotificationManager.ignoreAction else { return }
+              action == NotificationManager.startAction || action == NotificationManager.ignoreAction
+                || action == UNNotificationDefaultActionIdentifier else { return }
         activeCandidateID = nil
         notifications.removeCandidate(identifier)
-        if action == NotificationManager.startAction {
-            actionMessage = "녹음 기능은 Phase 3에서 제공됩니다."
-            let alert = NSAlert()
-            alert.messageText = "아직 녹음을 시작할 수 없습니다"
-            alert.informativeText = actionMessage ?? ""
-            NSApp.activate(ignoringOtherApps: true)
-            alert.runModal()
+        if action == NotificationManager.startAction || action == UNNotificationDefaultActionIdentifier {
+            startRecording()
         }
     }
 }

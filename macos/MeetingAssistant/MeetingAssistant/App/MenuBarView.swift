@@ -12,10 +12,23 @@ struct MenuBarView: View {
         Text("회의 감지: \(detection.statusText)")
         if let app = detection.runningApps.first { Text("감시 앱 실행 중: \(app.displayName)") }
         if let message = detection.actionMessage { Text(message) }
-        Text("녹음: 아직 지원하지 않음 (Phase 3)")
+        if let startedAt = detection.recorder.startedAt {
+            Text("🔴 녹음 중 · 시작: \(startedAt.formatted(date: .omitted, time: .shortened))")
+        } else if detection.recorder.isStarting {
+            Text("마이크 권한 확인 및 녹음 준비 중…")
+        } else {
+            Text("녹음 중이 아님")
+        }
+        if let error = detection.recorder.errorMessage { Text(error) }
+        if let url = detection.recorder.lastSavedURL { Text("최근 녹음: \(url.lastPathComponent)") }
         Divider()
         Text("감시 대상으로 선택한 앱: \(settings.watchedApplications.filter(\.isEnabled).count)개")
-        Button("녹음 시작 — 준비 중") {}.disabled(true)
+        if detection.recorder.isRecording {
+            Button("녹음 종료") { detection.stopRecording() }
+        } else {
+            Button("녹음 시작") { detection.startRecording() }
+                .disabled(detection.recorder.isStarting || settings.recordingsURL == nil)
+        }
         Button("녹음 폴더 열기") {
             guard let url = settings.recordingsURL else { return }
             if !NSWorkspace.shared.open(url) {
@@ -30,7 +43,10 @@ struct MenuBarView: View {
             openSettings()
         }
         .keyboardShortcut(",")
-        Button("종료") { NSApp.terminate(nil) }
+        Button("종료") {
+            if detection.recorder.isRecording { detection.stopRecording() }
+            NSApp.terminate(nil)
+        }
             .keyboardShortcut("q")
     }
 }

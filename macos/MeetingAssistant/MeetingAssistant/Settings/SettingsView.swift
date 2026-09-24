@@ -9,7 +9,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section {
-                Text("감시 앱과 알림을 설정하세요. 회의 가능성 감지는 작동 중이며 녹음은 다음 단계에서 제공됩니다.")
+                Text("감시 앱과 알림을 설정하세요. 녹음 시작 시 마이크 권한을 요청하고 녹음 파일을 프로젝트 폴더에 저장합니다.")
                     .foregroundStyle(.secondary)
             }
             Section("감시할 앱") {
@@ -76,7 +76,7 @@ struct SettingsView: View {
                     .textSelection(.enabled)
                     .lineLimit(nil)
                 Button("프로젝트 폴더 선택…", action: chooseProject)
-                Text("meeting.py가 있는 폴더를 선택하세요. 녹음은 이 폴더의 recordings에 저장될 예정입니다.")
+                Text("meeting.py가 있는 폴더를 선택하세요. 녹음은 이 폴더의 recordings에 .m4a로 저장됩니다.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             if let error = settings.errorMessage {

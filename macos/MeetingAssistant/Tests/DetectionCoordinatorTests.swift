@@ -16,6 +16,9 @@ import XCTest
         XCTAssertFalse(candidate(.inactive, .inactive))
         XCTAssertFalse(candidate(.inactive, .active, watched: false))
         XCTAssertFalse(candidate(.inactive, .active, enabled: false))
+        XCTAssertFalse(DetectionCoordinator.shouldNotify(previous: .inactive, current: .active,
+            hasWatchedApp: true, enabled: true, recordingBusy: true,
+            lastNotificationAt: nil, now: now))
         XCTAssertFalse(candidate(.inactive, .active, last: now.addingTimeInterval(-59)))
         XCTAssertTrue(candidate(.inactive, .active, last: now.addingTimeInterval(-60)))
     }
