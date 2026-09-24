@@ -120,7 +120,8 @@ final class DetectionCoordinator {
         recordingStartInFlight = true
         Task {
             defer { recordingStartInFlight = false }
-            do { try await recorder.start(in: settings.recordingsURL) }
+            do { try await recorder.start(in: settings.recordingsURL,
+                                          appBundleIdentifier: runningApps.first?.bundleIdentifier) }
             catch {
                 actionMessage = error.localizedDescription
                 let alert = NSAlert()
@@ -133,8 +134,10 @@ final class DetectionCoordinator {
     }
 
     func stopRecording() {
-        do { try recorder.stop() }
-        catch { actionMessage = error.localizedDescription }
+        Task {
+            do { try await recorder.stop() }
+            catch { actionMessage = error.localizedDescription }
+        }
     }
 
     private func handleAction(_ action: String, identifier: String) {

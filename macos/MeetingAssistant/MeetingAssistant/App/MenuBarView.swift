@@ -15,7 +15,9 @@ struct MenuBarView: View {
         if let startedAt = detection.recorder.startedAt {
             Text("🔴 녹음 중 · 시작: \(startedAt.formatted(date: .omitted, time: .shortened))")
         } else if detection.recorder.isStarting {
-            Text("마이크 권한 확인 및 녹음 준비 중…")
+            Text("녹음 권한 확인 및 준비 중…")
+        } else if detection.recorder.isFinishing {
+            Text("녹음 파일 저장 중…")
         } else {
             Text("녹음 중이 아님")
         }
@@ -27,7 +29,8 @@ struct MenuBarView: View {
             Button("녹음 종료") { detection.stopRecording() }
         } else {
             Button("녹음 시작") { detection.startRecording() }
-                .disabled(detection.recorder.isStarting || settings.recordingsURL == nil)
+                .disabled(detection.recorder.isBusy || settings.recordingsURL == nil
+                          || detection.runningApps.isEmpty)
         }
         Button("녹음 폴더 열기") {
             guard let url = settings.recordingsURL else { return }
@@ -44,8 +47,12 @@ struct MenuBarView: View {
         }
         .keyboardShortcut(",")
         Button("종료") {
-            if detection.recorder.isRecording { detection.stopRecording() }
-            NSApp.terminate(nil)
+            Task {
+                while detection.recorder.isStarting { try? await Task.sleep(for: .milliseconds(100)) }
+                if detection.recorder.isRecording { detection.stopRecording() }
+                while detection.recorder.isBusy { try? await Task.sleep(for: .milliseconds(100)) }
+                NSApp.terminate(nil)
+            }
         }
             .keyboardShortcut("q")
     }
