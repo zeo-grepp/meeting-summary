@@ -22,9 +22,13 @@ struct SettingsView: View {
                 ForEach($settings.watchedApplications) { $app in
                     HStack {
                         Toggle(isOn: $app.isEnabled) {
-                            VStack(alignment: .leading) {
-                                Text(app.displayName)
-                                Text(app.bundleIdentifier).font(.caption).foregroundStyle(.secondary)
+                            HStack {
+                                Image(nsImage: icon(for: app))
+                                    .resizable().frame(width: 20, height: 20)
+                                VStack(alignment: .leading) {
+                                    Text(app.displayName)
+                                    Text(app.bundleIdentifier).font(.caption).foregroundStyle(.secondary)
+                                }
                             }
                         }
                         Button(role: .destructive) {
@@ -135,6 +139,13 @@ struct SettingsView: View {
             Task { await notifications.refresh() }
             refreshPermissions()
         }
+    }
+
+    /// 경로는 저장하지 않으므로 bundle identifier로 매번 찾는다. 앱이 없으면 일반 앱 아이콘으로 자리를 지킨다.
+    private func icon(for app: WatchedApplication) -> NSImage {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: app.bundleIdentifier)
+        else { return NSWorkspace.shared.icon(for: .applicationBundle) }
+        return NSWorkspace.shared.icon(forFile: url.path)
     }
 
     private func openNotificationSettings() {
