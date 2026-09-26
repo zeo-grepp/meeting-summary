@@ -8,7 +8,7 @@ struct MenuBarView: View {
 
     /// 동작 실패 메시지는 출처가 어디든(감지기/레코더/폴더 열기) 한 줄로만 보여준다.
     private var alertMessage: String? {
-        detection.actionMessage ?? detection.recorder.errorMessage
+        detection.actionMessage ?? detection.recorder.errorMessage ?? detection.summaryRunner.errorMessage
     }
 
     /// "녹음 시작"이 비활성인 이유. macOS 메뉴 항목은 툴팁이 없어 직접 적어주지 않으면 알 길이 없다.
@@ -36,11 +36,23 @@ struct MenuBarView: View {
         } else {
             Text("녹음 중이 아님")
         }
+        if let stageText = detection.summaryRunner.stageText {
+            Text("회의록 만드는 중 · \(stageText)")
+        }
         if let alertMessage { Text("⚠️ \(alertMessage)") }
         if let url = detection.recorder.lastSavedURL {
             Button("최근 녹음: \(url.lastPathComponent)") {
                 NSWorkspace.shared.activateFileViewerSelecting([url])
             }
+        }
+        if let url = detection.summaryRunner.lastSummaryURL {
+            Button("최근 회의록: \(url.lastPathComponent)") { NSWorkspace.shared.open(url) }
+        }
+        if let audio = detection.summaryRunner.lastAudioURL {
+            Button("회의록 다시 만들기") {
+                detection.summaryRunner.run(audio: audio, projectRoot: settings.projectRootURL)
+            }
+            .disabled(detection.summaryRunner.isRunning)
         }
         Divider()
         if let startBlockReason { Text(startBlockReason) }
@@ -74,6 +86,8 @@ struct MenuBarView: View {
         .keyboardShortcut(",")
         Button("종료") {
             Task {
+                // 녹음 파일은 이미 디스크에 있다. 회의록은 다음에 다시 만들면 된다.
+                detection.summaryRunner.cancel()
                 while detection.recorder.isStarting { try? await Task.sleep(for: .milliseconds(100)) }
                 if detection.recorder.isRecording { detection.stopRecording() }
                 while detection.recorder.isBusy { try? await Task.sleep(for: .milliseconds(100)) }

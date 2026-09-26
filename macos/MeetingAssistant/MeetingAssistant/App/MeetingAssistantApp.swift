@@ -55,6 +55,8 @@ struct MeetingAssistantApp: App {
                 Text("저장 중…")
             } else if model.detection.recorder.isStarting {
                 Text("준비 중…")
+            } else if model.detection.summaryRunner.isRunning {
+                Text("회의록 만드는 중…")
             }
         }
         Settings {
