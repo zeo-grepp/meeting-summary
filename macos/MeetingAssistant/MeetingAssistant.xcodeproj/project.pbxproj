@@ -23,6 +23,8 @@
 		00000000000000000000002E /* MeetingAssistant/Notification/NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000006 /* MeetingAssistant/Notification/NotificationManager.swift */; };
 		000000000000000000000030 /* MeetingAssistant/Resources/AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000002F /* MeetingAssistant/Resources/AppIcon.icns */; };
 		000000000000000000000034 /* MeetingAssistant/Recording/Recorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000032 /* MeetingAssistant/Recording/Recorder.swift */; };
+		0000000000000000000000A3 /* MeetingAssistant/Integration/MeetingSummaryRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A2 /* MeetingAssistant/Integration/MeetingSummaryRunner.swift */; };
+		0000000000000000000000A4 /* MeetingAssistant/Integration/MeetingSummaryRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A2 /* MeetingAssistant/Integration/MeetingSummaryRunner.swift */; };
 		000000000000000000000035 /* MeetingAssistant/Recording/Recorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000032 /* MeetingAssistant/Recording/Recorder.swift */; };
 		0000000000000000000000A1 /* MeetingAssistant/Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A0 /* MeetingAssistant/Resources/Assets.xcassets */; };
 		153EB8DB30658DB90058212C /* MeetingAssistant/Detection/AppDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000026 /* MeetingAssistant/Detection/AppDetector.swift */; };
@@ -47,6 +49,7 @@
 		000000000000000000000029 /* Tests/DetectionCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/DetectionCoordinatorTests.swift; sourceTree = "<group>"; };
 		00000000000000000000002F /* MeetingAssistant/Resources/AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = MeetingAssistant/Resources/AppIcon.icns; sourceTree = "<group>"; };
 		000000000000000000000032 /* MeetingAssistant/Recording/Recorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/Recording/Recorder.swift; sourceTree = "<group>"; };
+		0000000000000000000000A2 /* MeetingAssistant/Integration/MeetingSummaryRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/Integration/MeetingSummaryRunner.swift; sourceTree = "<group>"; };
 		000000000000000000000033 /* MeetingAssistant/MeetingAssistant.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = MeetingAssistant/MeetingAssistant.entitlements; sourceTree = "<group>"; };
 		0000000000000000000000A0 /* MeetingAssistant/Resources/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = MeetingAssistant/Resources/Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -96,6 +99,7 @@
 				00000000000000000000002F /* MeetingAssistant/Resources/AppIcon.icns */,
 				0000000000000000000000A0 /* MeetingAssistant/Resources/Assets.xcassets */,
 				000000000000000000000032 /* MeetingAssistant/Recording/Recorder.swift */,
+				0000000000000000000000A2 /* MeetingAssistant/Integration/MeetingSummaryRunner.swift */,
 				000000000000000000000033 /* MeetingAssistant/MeetingAssistant.entitlements */,
 				00000000000000000000000B /* Products */,
 			);
@@ -192,6 +196,7 @@
 				00000000000000000000002B /* MeetingAssistant/Detection/MicrophoneDetector.swift in Sources */,
 				00000000000000000000002C /* MeetingAssistant/Detection/DetectionCoordinator.swift in Sources */,
 				000000000000000000000034 /* MeetingAssistant/Recording/Recorder.swift in Sources */,
+				0000000000000000000000A3 /* MeetingAssistant/Integration/MeetingSummaryRunner.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -208,6 +213,7 @@
 				00000000000000000000002D /* Tests/DetectionCoordinatorTests.swift in Sources */,
 				00000000000000000000002E /* MeetingAssistant/Notification/NotificationManager.swift in Sources */,
 				000000000000000000000035 /* MeetingAssistant/Recording/Recorder.swift in Sources */,
+				0000000000000000000000A4 /* MeetingAssistant/Integration/MeetingSummaryRunner.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
