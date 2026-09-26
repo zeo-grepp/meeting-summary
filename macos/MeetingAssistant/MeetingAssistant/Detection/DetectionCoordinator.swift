@@ -17,9 +17,23 @@ final class DetectionCoordinator {
     private(set) var runningApps: [WatchedApplication] = []
     private(set) var microphoneState: MicrophoneState = .unknown
     private(set) var isRunning = false
-    private(set) var actionMessage: String?
+    private var reportedText: String?
+    private var reportedAt: Date?
     /// 녹음 대상으로 고른 앱. 감시 앱이 둘 이상 실행 중일 때 무엇이 녹음되는지 보여주려고 둔다.
     private(set) var recordingAppName: String?
+
+    /// 마지막 동작 결과. 메뉴를 열 때마다 다시 평가되므로 오래된 메시지는 타이머 없이 저절로 사라진다.
+    var actionMessage: String? {
+        guard let reportedText, let reportedAt,
+              Date().timeIntervalSince(reportedAt) < 120 else { return nil }
+        return reportedText
+    }
+
+    /// 녹음 실패, 폴더 열기 실패처럼 메뉴에 한 번 보여주면 되는 메시지를 모아 받는다.
+    func report(_ text: String?) {
+        reportedText = text
+        reportedAt = text == nil ? nil : Date()
+    }
 
     init(settings: SettingsStore, notifications: NotificationManager) {
         self.settings = settings
@@ -118,7 +132,7 @@ final class DetectionCoordinator {
         guard !recorder.isBusy && !recordingStartInFlight else { return }
         if let id = activeCandidateID { notifications.removeCandidate(id) }
         activeCandidateID = nil
-        actionMessage = nil
+        report(nil)
         recordingStartInFlight = true
         let target = app ?? runningApps.first
         recordingAppName = target?.displayName
@@ -128,7 +142,7 @@ final class DetectionCoordinator {
                                           appBundleIdentifier: target?.bundleIdentifier) }
             catch {
                 recordingAppName = nil
-                actionMessage = error.localizedDescription
+                report(error.localizedDescription)
                 let alert = NSAlert()
                 alert.messageText = "녹음을 시작하지 못했습니다"
                 alert.informativeText = error.localizedDescription
@@ -141,7 +155,7 @@ final class DetectionCoordinator {
     func stopRecording() {
         Task {
             do { try await recorder.stop() }
-            catch { actionMessage = error.localizedDescription }
+            catch { report(error.localizedDescription) }
         }
     }
 

@@ -5,7 +5,11 @@ struct MenuBarView: View {
     let settings: SettingsStore
     let detection: DetectionCoordinator
     @Environment(\.openSettings) private var openSettings
-    @State private var errorMessage: String?
+
+    /// 동작 실패 메시지는 출처가 어디든(감지기/레코더/폴더 열기) 한 줄로만 보여준다.
+    private var alertMessage: String? {
+        detection.actionMessage ?? detection.recorder.errorMessage
+    }
 
     var body: some View {
         Text("Meeting Assistant")
@@ -13,7 +17,6 @@ struct MenuBarView: View {
         if !detection.runningApps.isEmpty {
             Text("감시 앱 실행 중: \(detection.runningApps.map(\.displayName).joined(separator: ", "))")
         }
-        if let message = detection.actionMessage { Text(message) }
         if let startedAt = detection.recorder.startedAt {
             Text("🔴 \(detection.recordingAppName ?? "녹음") 녹음 중 · 시작: \(startedAt.formatted(date: .omitted, time: .shortened))")
         } else if detection.recorder.isStarting {
@@ -23,7 +26,7 @@ struct MenuBarView: View {
         } else {
             Text("녹음 중이 아님")
         }
-        if let error = detection.recorder.errorMessage { Text(error) }
+        if let alertMessage { Text("⚠️ \(alertMessage)") }
         if let url = detection.recorder.lastSavedURL { Text("최근 녹음: \(url.lastPathComponent)") }
         Divider()
         Text("감시 대상으로 선택한 앱: \(settings.watchedApplications.filter(\.isEnabled).count)개")
@@ -45,11 +48,10 @@ struct MenuBarView: View {
         Button("녹음 폴더 열기") {
             guard let url = settings.recordingsURL else { return }
             if !NSWorkspace.shared.open(url) {
-                errorMessage = "녹음 폴더를 열 수 없습니다. 설정의 프로젝트 경로와 recordings 폴더를 확인해주세요."
+                detection.report("녹음 폴더를 열 수 없습니다. 설정의 프로젝트 경로와 recordings 폴더를 확인해주세요.")
             }
         }
         .disabled(settings.recordingsURL == nil)
-        if let errorMessage { Text(errorMessage) }
         Divider()
         Button("설정…") {
             NSApp.activate(ignoringOtherApps: true)
