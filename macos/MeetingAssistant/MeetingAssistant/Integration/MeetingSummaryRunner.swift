@@ -98,9 +98,14 @@ final class MeetingSummaryRunner {
         }
         defer { pipe.fileHandleForReading.readabilityHandler = nil }
 
-        try process.run()
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+        // run() 뒤에 핸들러를 걸면 즉시 실패하는 프로세스의 종료를 놓쳐 영원히 깨어나지 못한다.
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             process.terminationHandler = { _ in continuation.resume() }
+            do { try process.run() }
+            catch {
+                process.terminationHandler = nil
+                continuation.resume(throwing: error)
+            }
         }
         let tail = String(decoding: pipe.fileHandleForReading.availableData, as: UTF8.self)
         consume(tail)
@@ -118,7 +123,8 @@ final class MeetingSummaryRunner {
             // meeting.py가 이미 찍는 진행 표시를 그대로 쓴다.
             if line.hasPrefix("[1/2]") { stage = .transcribing }
             if line.hasPrefix("[2/2]") { stage = .summarizing }
-            recentLines.append(String(line))
+            // whisper의 진행 막대는 개행 없이 한참을 흘린다. 오류 메시지가 통째로 삼켜지지 않게 자른다.
+            recentLines.append(String(line.prefix(200)))
         }
         recentLines = Array(recentLines.suffix(20))
     }
