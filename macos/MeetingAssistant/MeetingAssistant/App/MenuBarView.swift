@@ -6,9 +6,14 @@ struct MenuBarView: View {
     let detection: DetectionCoordinator
     @Environment(\.openSettings) private var openSettings
 
-    /// 동작 실패 메시지는 출처가 어디든(감지기/레코더/폴더 열기) 한 줄로만 보여준다.
+    /// 동작 실패 메시지는 출처가 어디든(감지기/레코더/요약기) 한 줄로만 보여준다.
     private var alertMessage: String? {
         detection.actionMessage ?? detection.recorder.errorMessage ?? detection.summaryRunner.errorMessage
+    }
+
+    /// 메뉴 폭은 가장 긴 항목이 정한다. 오류 메시지나 긴 파일명 하나가 화면을 가로지르지 않게 자른다.
+    private func short(_ text: String, _ limit: Int = 40) -> String {
+        text.count <= limit ? text : text.prefix(limit) + "…"
     }
 
     /// "녹음 시작"이 비활성인 이유. macOS 메뉴 항목은 툴팁이 없어 직접 적어주지 않으면 알 길이 없다.
@@ -25,10 +30,12 @@ struct MenuBarView: View {
     var body: some View {
         Text("회의 감지: \(detection.statusText)")
         if !detection.runningApps.isEmpty {
-            Text("감시 앱 실행 중: \(detection.runningApps.map(\.displayName).joined(separator: ", "))")
+            Text(short("감시 앱 실행 중: \(detection.runningApps.map(\.displayName).joined(separator: ", "))"))
         }
         if detection.recorder.isRecording {
-            Text("🔴 \(detection.recordingAppName ?? "녹음") 녹음 중 · \(detection.recorder.elapsedText)")
+            // 경과 시간은 바로 위 메뉴바 라벨이 보여준다. 여기에 두면 초마다 메뉴가
+            // 다시 그려져 마우스가 올라간 항목에서 포커스가 튄다.
+            Text("🔴 \(detection.recordingAppName ?? "녹음") 녹음 중")
         } else if detection.recorder.isStarting {
             Text("녹음 권한 확인 및 준비 중…")
         } else if detection.recorder.isFinishing {
@@ -39,14 +46,14 @@ struct MenuBarView: View {
         if let stageText = detection.summaryRunner.stageText {
             Text("회의록 만드는 중 · \(stageText)")
         }
-        if let alertMessage { Text("⚠️ \(alertMessage)") }
+        if let alertMessage { Text(short("⚠️ \(alertMessage)", 60)) }
         if let url = detection.recorder.lastSavedURL {
-            Button("최근 녹음: \(url.lastPathComponent)") {
+            Button(short("최근 녹음: \(url.lastPathComponent)")) {
                 NSWorkspace.shared.activateFileViewerSelecting([url])
             }
         }
         if let url = detection.summaryRunner.lastSummaryURL {
-            Button("최근 회의록: \(url.lastPathComponent)") { NSWorkspace.shared.open(url) }
+            Button(short("최근 회의록: \(url.lastPathComponent)")) { NSWorkspace.shared.open(url) }
         }
         if let audio = detection.summaryRunner.lastAudioURL {
             Button("회의록 다시 만들기") {
