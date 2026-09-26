@@ -12,6 +12,9 @@ final class Recorder: NSObject {
     @ObservationIgnored private var outputURL: URL?
     @ObservationIgnored private var finishContinuation: CheckedContinuation<Void, Error>?
     @ObservationIgnored private var elapsedTimer: Timer?
+    /// 파일이 .m4a로 저장된 직후 호출된다. 정상 종료든 강제 중단이든 같은 자리를 거친다.
+    /// 다른 URL을 돌려주면 그쪽이 최종 저장 위치가 된다(이름 바꾸기).
+    @ObservationIgnored var onSaved: ((URL) -> URL?)?
     private(set) var isStarting = false
     private(set) var isFinishing = false
     private(set) var startedAt: Date?
@@ -121,10 +124,11 @@ final class Recorder: NSObject {
                 throw RecordingError.emptyFile
             }
             try FileManager.default.removeItem(at: temporaryURL)
-            lastSavedURL = outputURL
+            let savedURL = onSaved?(outputURL) ?? outputURL
+            lastSavedURL = savedURL
             errorMessage = nil
             clearCapture()
-            return outputURL
+            return savedURL
         } catch {
             errorMessage = "녹음 저장 실패: \(error.localizedDescription)"
             clearCapture()

@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import Observation
+import UniformTypeIdentifiers
 import UserNotifications
 
 @MainActor @Observable
@@ -39,6 +40,29 @@ final class DetectionCoordinator {
         self.settings = settings
         self.notifications = notifications
         appDetector = AppDetector(settings: settings)
+        recorder.onSaved = { [weak self] url in self?.renameSavedRecording(url) }
+    }
+
+    /// 저장이 끝난 뒤 이름을 물어본다. 취소하거나 실패해도 파일은 자동 이름으로 이미 그 자리에 있다.
+    private func renameSavedRecording(_ url: URL) -> URL? {
+        let panel = NSSavePanel()
+        panel.title = "녹음 저장"
+        panel.nameFieldLabel = "파일 이름:"
+        panel.nameFieldStringValue = url.lastPathComponent
+        panel.directoryURL = url.deletingLastPathComponent()
+        panel.allowedContentTypes = [.mpeg4Audio]
+        panel.prompt = "저장"
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK, let target = panel.url, target != url else { return nil }
+        do {
+            // 덮어쓸지는 패널이 이미 물어봤다.
+            try? FileManager.default.removeItem(at: target)
+            try FileManager.default.moveItem(at: url, to: target)
+            return target
+        } catch {
+            report("이름을 바꾸지 못해 \(url.lastPathComponent)로 저장했습니다: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     var statusText: String {
