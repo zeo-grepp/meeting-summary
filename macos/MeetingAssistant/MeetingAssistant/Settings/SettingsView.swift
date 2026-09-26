@@ -80,26 +80,32 @@ struct SettingsView: View {
                             }
                         }
                     }
-                LabeledContent("macOS 알림 권한", value: notifications.statusText)
-                if notifications.authorizationStatus == .authorized {
-                    LabeledContent("알림 소리", value: notifications.soundsEnabled ? "허용됨" : "꺼짐 — 시스템 설정 > 알림에서 확인")
-                    // 권한이 한 번 결정된 뒤에는 requestAuthorization이 다이얼로그를 띄우지 않는다.
-                    // 소리는 앱에서 켤 수 없으므로 시스템 설정으로 보낸다.
-                    if settings.notificationsEnabled && !notifications.soundsEnabled {
-                        Button("시스템 설정에서 알림 소리 켜기", action: openNotificationSettings)
+                // 권한 상태에 따라 줄이 생겼다 사라지면 레이아웃이 튄다.
+                // 줄은 항상 두고 버튼만 비활성으로 바꾼다.
+                LabeledContent("macOS 알림 권한") {
+                    HStack {
+                        Text(notifications.statusText)
+                        Button(notifications.authorizationStatus == .notDetermined ? "요청" : "시스템 설정") {
+                            // 권한이 한 번 결정된 뒤에는 requestAuthorization이 다이얼로그를 띄우지 않는다.
+                            if notifications.authorizationStatus == .notDetermined {
+                                Task { await notifications.requestAuthorization() }
+                            } else {
+                                openNotificationSettings()
+                            }
+                        }
+                        .disabled(notifications.isRequesting
+                                  || (notifications.authorizationStatus == .authorized && notifications.alertsEnabled))
                     }
                 }
-                if settings.notificationsEnabled && notifications.authorizationStatus == .notDetermined {
-                    Button("알림 권한 요청") {
-                        Task { await notifications.requestAuthorization() }
+                LabeledContent("알림 소리") {
+                    HStack {
+                        Text(notifications.soundsEnabled ? "허용됨" : "꺼짐")
+                        Button("시스템 설정", action: openNotificationSettings)
+                            .disabled(notifications.soundsEnabled)
                     }
-                    .disabled(notifications.isRequesting)
                 }
                 if let error = notifications.errorMessage {
                     Text(error).foregroundStyle(.red).textSelection(.enabled)
-                }
-                if notifications.authorizationStatus == .denied {
-                    Button("시스템 설정에서 알림 허용하기", action: openNotificationSettings)
                 }
             }
             Section("프로젝트 폴더") {

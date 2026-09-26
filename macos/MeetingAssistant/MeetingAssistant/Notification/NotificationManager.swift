@@ -48,8 +48,9 @@ final class NotificationManager {
     var statusText: String {
         switch authorizationStatus {
         case .notDetermined: "아직 요청하지 않음"
-        case .denied: "거부됨 — 시스템 설정 > 알림에서 변경해주세요."
-        case .authorized: alertsEnabled ? "허용됨" : "허용됨 — 배너/알림 표시는 꺼져 있습니다."
+        // 시스템 설정으로 가라는 안내는 옆의 버튼이 대신한다.
+        case .denied: "거부됨"
+        case .authorized: alertsEnabled ? "허용됨" : "허용됨 — 배너 표시 꺼짐"
         case .provisional: "조용한 알림 허용됨"
         case .ephemeral: "일시적으로 허용됨"
         case nil: "확인 중…"
