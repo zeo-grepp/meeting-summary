@@ -146,8 +146,8 @@ final class DetectionCoordinator {
                 || action == UNNotificationDefaultActionIdentifier else { return }
         activeCandidateID = nil
         notifications.removeCandidate(identifier)
-        if action == NotificationManager.startAction || action == UNNotificationDefaultActionIdentifier {
-            startRecording()
-        }
+        // 배너 본문 클릭(default action)은 macOS 관례상 "앱 열기"다.
+        // 녹음은 "녹음 시작" 버튼을 눌렀을 때만 시작한다.
+        if action == NotificationManager.startAction { startRecording() }
     }
 }
