@@ -47,8 +47,14 @@ struct MeetingAssistantApp: App {
             MenuBarView(settings: model.settings, detection: model.detection)
         } label: {
             MenuBarIcon(settings: model.settings)
+            // 메뉴가 닫혀 있어도 보이는 유일한 자리다.
+            // ⌘Q로 종료할 때 저장이 끝날 때까지 기다리는 동안의 유일한 피드백이기도 하다.
             if model.detection.recorder.isRecording {
                 Text(model.detection.recorder.elapsedText)
+            } else if model.detection.recorder.isFinishing {
+                Text("저장 중…")
+            } else if model.detection.recorder.isStarting {
+                Text("준비 중…")
             }
         }
         Settings {
