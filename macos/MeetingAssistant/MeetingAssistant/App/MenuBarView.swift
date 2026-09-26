@@ -28,8 +28,8 @@ struct MenuBarView: View {
         if !detection.runningApps.isEmpty {
             Text("감시 앱 실행 중: \(detection.runningApps.map(\.displayName).joined(separator: ", "))")
         }
-        if let startedAt = detection.recorder.startedAt {
-            Text("🔴 \(detection.recordingAppName ?? "녹음") 녹음 중 · 시작: \(startedAt.formatted(date: .omitted, time: .shortened))")
+        if detection.recorder.isRecording {
+            Text("🔴 \(detection.recordingAppName ?? "녹음") 녹음 중 · \(detection.recorder.elapsedText)")
         } else if detection.recorder.isStarting {
             Text("녹음 권한 확인 및 준비 중…")
         } else if detection.recorder.isFinishing {

@@ -21,8 +21,12 @@ final class Recorder: NSObject {
 
     var isRecording: Bool { startedAt != nil }
     var isBusy: Bool { isStarting || isRecording || isFinishing }
+    /// 메뉴바는 자리가 좁다. 1시간을 넘기기 전에는 시(時) 자리를 쓰지 않는다.
     var elapsedText: String {
-        String(format: "%02d:%02d:%02d", elapsedSeconds / 3600, elapsedSeconds / 60 % 60, elapsedSeconds % 60)
+        let hours = elapsedSeconds / 3600, minutes = elapsedSeconds / 60 % 60, seconds = elapsedSeconds % 60
+        return hours > 0
+            ? String(format: "%d:%02d:%02d", hours, minutes, seconds)
+            : String(format: "%02d:%02d", minutes, seconds)
     }
 
     func start(in directory: URL?, appBundleIdentifier: String?) async throws {
