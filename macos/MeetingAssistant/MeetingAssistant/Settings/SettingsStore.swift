@@ -67,9 +67,11 @@ final class SettingsStore {
         !projectRootPath.isEmpty && watchedApplications.contains(where: \.isEnabled)
     }
 
+    var projectRootURL: URL? {
+        projectRootPath.isEmpty ? nil : URL(fileURLWithPath: projectRootPath, isDirectory: true)
+    }
+
     var recordingsURL: URL? {
-        guard !projectRootPath.isEmpty else { return nil }
-        return URL(fileURLWithPath: projectRootPath, isDirectory: true)
-            .appendingPathComponent("recordings", isDirectory: true)
+        projectRootURL?.appendingPathComponent("recordings", isDirectory: true)
     }
 }

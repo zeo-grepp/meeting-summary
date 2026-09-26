@@ -7,12 +7,14 @@ import UserNotifications
 @MainActor @Observable
 final class DetectionCoordinator {
     let recorder = Recorder()
+    let summaryRunner = MeetingSummaryRunner()
     private let settings: SettingsStore
     private let notifications: NotificationManager
     private let appDetector: AppDetector
     private let microphoneDetector = MicrophoneDetector()
     private var lastNotificationAt: Date?
     private var activeCandidateID: String?
+    private var summaryNotificationID: String?
     private var notificationInFlight = false
     private var recordingStartInFlight = false
     private(set) var runningApps: [WatchedApplication] = []
@@ -40,10 +42,24 @@ final class DetectionCoordinator {
         self.settings = settings
         self.notifications = notifications
         appDetector = AppDetector(settings: settings)
-        recorder.onSaved = { [weak self] url in self?.renameSavedRecording(url) }
+        recorder.onSaved = { [weak self] url in self?.handleSavedRecording(url) }
+        summaryRunner.onFinish = { [weak self] url in self?.announceSummary(url) }
     }
 
-    /// 저장이 끝난 뒤 이름을 물어본다. 취소하거나 실패해도 파일은 자동 이름으로 이미 그 자리에 있다.
+    /// 저장 직후 한 번만 불린다(정상 종료·강제 중단 공통). 이름을 물어보고 회의록 생성을 시작한다.
+    private func handleSavedRecording(_ url: URL) -> URL? {
+        let target = renameSavedRecording(url) ?? url
+        summaryRunner.run(audio: target, projectRoot: settings.projectRootURL)
+        return target
+    }
+
+    private func announceSummary(_ url: URL) {
+        Task {
+            summaryNotificationID = await notifications.postSummary(title: url.lastPathComponent)
+        }
+    }
+
+    /// 취소하거나 실패해도 파일은 자동 이름으로 이미 그 자리에 있다.
     private func renameSavedRecording(_ url: URL) -> URL? {
         let panel = NSSavePanel()
         panel.title = "녹음 저장"
@@ -184,6 +200,13 @@ final class DetectionCoordinator {
     }
 
     private func handleAction(_ action: String, identifier: String) {
+        if identifier == summaryNotificationID {
+            summaryNotificationID = nil
+            if action == UNNotificationDefaultActionIdentifier, let url = summaryRunner.lastSummaryURL {
+                NSWorkspace.shared.open(url)
+            }
+            return
+        }
         guard identifier == activeCandidateID,
               action == NotificationManager.startAction || action == UNNotificationDismissActionIdentifier
                 || action == UNNotificationDefaultActionIdentifier else { return }

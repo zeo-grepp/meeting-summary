@@ -22,6 +22,7 @@ private final class NotificationActionDelegate: NSObject, UNUserNotificationCent
 final class NotificationManager {
     static let startAction = "START_RECORDING"
     private static let category = "MEETING_CANDIDATE"
+    private static let summaryCategory = "SUMMARY_DONE"
     private let center = UNUserNotificationCenter.current()
     private let actionDelegate = NotificationActionDelegate()
     var onAction: ((String, String) -> Void)?
@@ -41,7 +42,10 @@ final class NotificationManager {
             // 액션 하나만 두어 "녹음 시작"을 버튼으로 노출하고, 무시는 배너의 닫기(X)로 받는다.
             UNNotificationCategory(identifier: Self.category, actions: [
                 UNNotificationAction(identifier: Self.startAction, title: "녹음 시작", options: [.foreground])
-            ], intentIdentifiers: [], options: [.customDismissAction])
+            ], intentIdentifiers: [], options: [.customDismissAction]),
+            // 본문을 누르면 회의록을 여는 것 말고 할 일이 없어 액션을 두지 않는다.
+            UNNotificationCategory(identifier: Self.summaryCategory, actions: [],
+                                   intentIdentifiers: [], options: [])
         ])
     }
 
@@ -93,6 +97,25 @@ final class NotificationManager {
             return identifier
         } catch {
             errorMessage = "회의 알림을 표시하지 못했습니다: \(error.localizedDescription)"
+            return nil
+        }
+    }
+
+    /// 작업 완료 알림. "회의 감지 알림" 설정과는 별개이므로 권한만 확인한다.
+    func postSummary(title: String) async -> String? {
+        await refresh()
+        guard authorizationStatus == .authorized, alertsEnabled else { return nil }
+        let content = UNMutableNotificationContent()
+        content.title = "회의록이 준비됐어요"
+        content.body = "\(title)\n눌러서 열어보세요."
+        content.sound = .default
+        content.categoryIdentifier = Self.summaryCategory
+        let identifier = UUID().uuidString
+        do {
+            try await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
+            return identifier
+        } catch {
+            errorMessage = "회의록 완료 알림을 표시하지 못했습니다: \(error.localizedDescription)"
             return nil
         }
     }
