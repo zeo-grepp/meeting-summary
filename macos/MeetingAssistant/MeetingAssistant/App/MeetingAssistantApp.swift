@@ -20,6 +20,24 @@ final class MeetingAssistantModel {
     }
 }
 
+/// 메뉴바 아이콘. 설정이 비어 있으면 첫 실행에서 설정 창을 띄우는 역할도 겸한다.
+/// (Dock 아이콘이 없는 앱이라 메뉴를 직접 열기 전까지는 아무 신호가 없다.)
+/// 경과 시간 Text는 이 뷰 안에 넣지 않는다 — MenuBarExtra 라벨은 Image/Text가
+/// 형제로 놓여야 둘 다 표시된다.
+private struct MenuBarIcon: View {
+    let settings: SettingsStore
+    @Environment(\.openSettings) private var openSettings
+
+    var body: some View {
+        Image(systemName: "person.2.wave.2.fill")
+            .task {
+                guard !settings.isConfigured else { return }
+                NSApp.activate(ignoringOtherApps: true)
+                openSettings()
+            }
+    }
+}
+
 @main
 struct MeetingAssistantApp: App {
     @State private var model = MeetingAssistantModel()
@@ -28,7 +46,7 @@ struct MeetingAssistantApp: App {
         MenuBarExtra {
             MenuBarView(settings: model.settings, detection: model.detection)
         } label: {
-            Image(systemName: "person.2.wave.2.fill")
+            MenuBarIcon(settings: model.settings)
             if model.detection.recorder.isRecording {
                 Text(model.detection.recorder.elapsedText)
             }

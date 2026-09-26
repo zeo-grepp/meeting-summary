@@ -63,6 +63,10 @@ final class SettingsStore {
         projectRootPath = url.standardizedFileURL.path
     }
 
+    var isConfigured: Bool {
+        !projectRootPath.isEmpty && watchedApplications.contains(where: \.isEnabled)
+    }
+
     var recordingsURL: URL? {
         guard !projectRootPath.isEmpty else { return nil }
         return URL(fileURLWithPath: projectRootPath, isDirectory: true)
