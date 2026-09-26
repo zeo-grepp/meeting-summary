@@ -85,6 +85,10 @@ final class MeetingSummaryRunner {
         process.executableURL = python
         process.arguments = [script.path, "--audio", audio.path]
         process.currentDirectoryURL = projectRoot
+        // GUI로 실행된 앱의 PATH에는 Homebrew가 없다. whisper가 내부에서 부르는 ffmpeg를 못 찾는다.
+        var environment = ProcessInfo.processInfo.environment
+        environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + (environment["PATH"] ?? "/usr/bin:/bin")
+        process.environment = environment
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe
@@ -116,14 +120,18 @@ final class MeetingSummaryRunner {
     }
 
     @ObservationIgnored private var recentLines: [String] = []
-    private var recentOutput: String { recentLines.suffix(20).joined(separator: "\n") }
+    /// 메뉴 한 줄에 들어가야 한다. 파이썬 역추적의 마지막 줄이 곧 원인이므로 그것만 쓴다.
+    private var recentOutput: String {
+        String((recentLines.last ?? "알 수 없는 오류").prefix(120))
+    }
 
     private func consume(_ text: String) {
-        for line in text.split(separator: "\n", omittingEmptySubsequences: true) {
+        for line in text.split(whereSeparator: \.isNewline) {
             // meeting.py가 이미 찍는 진행 표시를 그대로 쓴다.
             if line.hasPrefix("[1/2]") { stage = .transcribing }
             if line.hasPrefix("[2/2]") { stage = .summarizing }
-            // whisper의 진행 막대는 개행 없이 한참을 흘린다. 오류 메시지가 통째로 삼켜지지 않게 자른다.
+            // whisper의 진행 막대는 개행 없이 흘러 마지막 줄을 차지한다. 원인 줄을 가리지 않게 버린다.
+            guard !line.contains("s]") else { continue }
             recentLines.append(String(line.prefix(200)))
         }
         recentLines = Array(recentLines.suffix(20))
@@ -134,8 +142,8 @@ final class MeetingSummaryRunner {
 
         var errorDescription: String? {
             switch self {
-            case let .exited(code, output): "meeting.py가 종료 코드 \(code)로 끝났습니다.\n\(output)"
-            case let .noSummary(output): "요약 파일이 생성되지 않았습니다.\n\(output)"
+            case let .exited(code, output): "meeting.py 종료 코드 \(code) — \(output)"
+            case let .noSummary(output): "요약 파일이 생성되지 않았습니다 — \(output)"
             }
         }
     }
