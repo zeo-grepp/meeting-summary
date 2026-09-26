@@ -18,6 +18,8 @@ final class DetectionCoordinator {
     private(set) var microphoneState: MicrophoneState = .unknown
     private(set) var isRunning = false
     private(set) var actionMessage: String?
+    /// 녹음 대상으로 고른 앱. 감시 앱이 둘 이상 실행 중일 때 무엇이 녹음되는지 보여주려고 둔다.
+    private(set) var recordingAppName: String?
 
     init(settings: SettingsStore, notifications: NotificationManager) {
         self.settings = settings
@@ -112,17 +114,20 @@ final class DetectionCoordinator {
             && (lastNotificationAt.map { now.timeIntervalSince($0) >= 60 } ?? true)
     }
 
-    func startRecording() {
+    func startRecording(app: WatchedApplication? = nil) {
         guard !recorder.isBusy && !recordingStartInFlight else { return }
         if let id = activeCandidateID { notifications.removeCandidate(id) }
         activeCandidateID = nil
         actionMessage = nil
         recordingStartInFlight = true
+        let target = app ?? runningApps.first
+        recordingAppName = target?.displayName
         Task {
             defer { recordingStartInFlight = false }
             do { try await recorder.start(in: settings.recordingsURL,
-                                          appBundleIdentifier: runningApps.first?.bundleIdentifier) }
+                                          appBundleIdentifier: target?.bundleIdentifier) }
             catch {
+                recordingAppName = nil
                 actionMessage = error.localizedDescription
                 let alert = NSAlert()
                 alert.messageText = "녹음을 시작하지 못했습니다"

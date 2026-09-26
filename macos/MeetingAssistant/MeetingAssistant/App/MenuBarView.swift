@@ -10,10 +10,12 @@ struct MenuBarView: View {
     var body: some View {
         Text("Meeting Assistant")
         Text("회의 감지: \(detection.statusText)")
-        if let app = detection.runningApps.first { Text("감시 앱 실행 중: \(app.displayName)") }
+        if !detection.runningApps.isEmpty {
+            Text("감시 앱 실행 중: \(detection.runningApps.map(\.displayName).joined(separator: ", "))")
+        }
         if let message = detection.actionMessage { Text(message) }
         if let startedAt = detection.recorder.startedAt {
-            Text("🔴 녹음 중 · 시작: \(startedAt.formatted(date: .omitted, time: .shortened))")
+            Text("🔴 \(detection.recordingAppName ?? "녹음") 녹음 중 · 시작: \(startedAt.formatted(date: .omitted, time: .shortened))")
         } else if detection.recorder.isStarting {
             Text("녹음 권한 확인 및 준비 중…")
         } else if detection.recorder.isFinishing {
@@ -27,6 +29,14 @@ struct MenuBarView: View {
         Text("감시 대상으로 선택한 앱: \(settings.watchedApplications.filter(\.isEnabled).count)개")
         if detection.recorder.isRecording {
             Button("녹음 종료") { detection.stopRecording() }
+        } else if detection.runningApps.count > 1 {
+            // 어느 앱 소리를 녹음할지 조용히 고르지 않고 직접 고르게 한다.
+            Menu("녹음 시작") {
+                ForEach(detection.runningApps) { app in
+                    Button(app.displayName) { detection.startRecording(app: app) }
+                }
+            }
+            .disabled(detection.recorder.isBusy || settings.recordingsURL == nil)
         } else {
             Button("녹음 시작") { detection.startRecording() }
                 .disabled(detection.recorder.isBusy || settings.recordingsURL == nil
