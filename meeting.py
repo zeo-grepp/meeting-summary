@@ -332,6 +332,11 @@ def main():
     )
 
     parser.add_argument(
+        "--audio",
+        help="녹음 파일 경로. 지정하지 않으면 recordings 폴더에서 직접 고릅니다.",
+    )
+
+    parser.add_argument(
         "--title",
         help="회의 제목. 지정하지 않으면 AI가 녹취록을 바탕으로 생성합니다.",
     )
@@ -345,7 +350,13 @@ def main():
     args = parser.parse_args()
 
     try:
-        audio_path = select_audio_file()
+        if args.audio:
+            audio_path = Path(args.audio).expanduser()
+
+            if not audio_path.is_file():
+                parser.error(f"녹음 파일을 찾을 수 없습니다: {audio_path}")
+        else:
+            audio_path = select_audio_file()
 
         transcript_path = transcribe(audio_path)
 
@@ -367,6 +378,8 @@ def main():
     except KeyboardInterrupt:
         print()
         print("취소되었습니다.")
+        # 종료 코드 0으로 끝나면 호출한 쪽이 취소를 성공으로 읽는다.
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
