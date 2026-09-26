@@ -23,7 +23,6 @@ struct MenuBarView: View {
     }
 
     var body: some View {
-        Text("Meeting Assistant")
         Text("회의 감지: \(detection.statusText)")
         if !detection.runningApps.isEmpty {
             Text("감시 앱 실행 중: \(detection.runningApps.map(\.displayName).joined(separator: ", "))")
