@@ -83,11 +83,10 @@ struct SettingsView: View {
                 LabeledContent("macOS 알림 권한", value: notifications.statusText)
                 if notifications.authorizationStatus == .authorized {
                     LabeledContent("알림 소리", value: notifications.soundsEnabled ? "허용됨" : "꺼짐 — 시스템 설정 > 알림에서 확인")
+                    // 권한이 한 번 결정된 뒤에는 requestAuthorization이 다이얼로그를 띄우지 않는다.
+                    // 소리는 앱에서 켤 수 없으므로 시스템 설정으로 보낸다.
                     if settings.notificationsEnabled && !notifications.soundsEnabled {
-                        Button("알림 소리 권한 요청") {
-                            Task { await notifications.requestAuthorization() }
-                        }
-                        .disabled(notifications.isRequesting)
+                        Button("시스템 설정에서 알림 소리 켜기", action: openNotificationSettings)
                     }
                 }
                 if settings.notificationsEnabled && notifications.authorizationStatus == .notDetermined {
@@ -99,8 +98,9 @@ struct SettingsView: View {
                 if let error = notifications.errorMessage {
                     Text(error).foregroundStyle(.red).textSelection(.enabled)
                 }
-                Text("알림이 거부된 경우 macOS 시스템 설정 > 알림 > Meeting Assistant에서 허용해주세요.")
-                    .font(.caption).foregroundStyle(.secondary)
+                if notifications.authorizationStatus == .denied {
+                    Button("시스템 설정에서 알림 허용하기", action: openNotificationSettings)
+                }
             }
             Section("프로젝트 폴더") {
                 Text(settings.projectRootPath.isEmpty ? "선택하지 않음" : settings.projectRootPath)
@@ -128,6 +128,12 @@ struct SettingsView: View {
             Task { await notifications.refresh() }
             refreshPermissions()
         }
+    }
+
+    private func openNotificationSettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")
+        else { return }
+        NSWorkspace.shared.open(url)
     }
 
     private func refreshPermissions() {
