@@ -38,7 +38,11 @@ struct MenuBarView: View {
             Text("녹음 중이 아님")
         }
         if let alertMessage { Text("⚠️ \(alertMessage)") }
-        if let url = detection.recorder.lastSavedURL { Text("최근 녹음: \(url.lastPathComponent)") }
+        if let url = detection.recorder.lastSavedURL {
+            Button("최근 녹음: \(url.lastPathComponent)") {
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+            }
+        }
         Divider()
         if let startBlockReason { Text(startBlockReason) }
         if detection.recorder.isRecording {
