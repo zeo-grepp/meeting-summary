@@ -167,12 +167,16 @@ final class Recorder: NSObject {
 
     private func startElapsedTimer() {
         elapsedSeconds = 0
-        elapsedTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self, let startedAt = self.startedAt else { return }
                 self.elapsedSeconds = Int(Date().timeIntervalSince(startedAt))
             }
         }
+        // 메뉴가 열려 있는 동안 런루프는 .eventTracking 모드로 돈다.
+        // scheduledTimer는 .default에만 등록돼 그 사이 시간이 멈춘다.
+        RunLoop.main.add(timer, forMode: .common)
+        elapsedTimer = timer
     }
 
     private func stopElapsedTimer() {
