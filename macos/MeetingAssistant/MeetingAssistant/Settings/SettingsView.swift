@@ -1,3 +1,4 @@
+import AVFoundation
 import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
@@ -5,6 +6,8 @@ import UniformTypeIdentifiers
 struct SettingsView: View {
     @Bindable var settings: SettingsStore
     let notifications: NotificationManager
+    @State private var microphoneGranted = false
+    @State private var screenRecordingGranted = false
 
     var body: some View {
         Form {
@@ -35,6 +38,34 @@ struct SettingsView: View {
                 }
                 Button("앱 추가…", action: chooseApplication)
                 Text("감지 조건: 선택한 앱 실행 중 + 오디오 입력 사용 시작")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            // 권한이 없으면 "녹음 시작"을 누른 뒤에야 시스템 다이얼로그가 뜨고,
+            // 화면 녹음은 허용해도 재시작이 필요해 그 회의를 통째로 놓친다. 미리 받아둔다.
+            Section("권한") {
+                LabeledContent("마이크") {
+                    HStack {
+                        Text(microphoneGranted ? "허용됨" : "필요함")
+                        Button("요청") {
+                            Task {
+                                _ = await AVCaptureDevice.requestAccess(for: .audio)
+                                refreshPermissions()
+                            }
+                        }
+                        .disabled(microphoneGranted)
+                    }
+                }
+                LabeledContent("화면·시스템 오디오 녹음") {
+                    HStack {
+                        Text(screenRecordingGranted ? "허용됨" : "필요함")
+                        Button("요청") {
+                            CGRequestScreenCaptureAccess()
+                            refreshPermissions()
+                        }
+                        .disabled(screenRecordingGranted)
+                    }
+                }
+                Text("앱 소리를 함께 녹음하려면 화면 녹음 권한이 필요합니다. 허용한 뒤에는 앱을 한 번 재시작해주세요.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("알림") {
@@ -89,10 +120,19 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 560, height: 600)
         .navigationTitle("Meeting Assistant 설정")
-        .task { await notifications.refresh() }
+        .task {
+            await notifications.refresh()
+            refreshPermissions()
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task { await notifications.refresh() }
+            refreshPermissions()
         }
+    }
+
+    private func refreshPermissions() {
+        microphoneGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        screenRecordingGranted = CGPreflightScreenCaptureAccess()
     }
 
     private func chooseApplication() {
