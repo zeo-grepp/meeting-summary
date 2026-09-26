@@ -118,7 +118,8 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 560, height: 600)
+        // 감시 앱이 늘거나 프로젝트 경로가 길면 내용이 넘치므로 크기를 고정하지 않는다.
+        .frame(minWidth: 460, minHeight: 420)
         .navigationTitle("Meeting Assistant 설정")
         .task {
             await notifications.refresh()
