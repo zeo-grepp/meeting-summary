@@ -11,16 +11,19 @@ final class Recorder: NSObject {
     @ObservationIgnored private var temporaryURL: URL?
     @ObservationIgnored private var outputURL: URL?
     @ObservationIgnored private var finishContinuation: CheckedContinuation<Void, Error>?
-    @ObservationIgnored private var statusItem: NSStatusItem?
-    @ObservationIgnored private var statusTimer: Timer?
+    @ObservationIgnored private var elapsedTimer: Timer?
     private(set) var isStarting = false
     private(set) var isFinishing = false
     private(set) var startedAt: Date?
+    private(set) var elapsedSeconds = 0
     private(set) var lastSavedURL: URL?
     private(set) var errorMessage: String?
 
     var isRecording: Bool { startedAt != nil }
     var isBusy: Bool { isStarting || isRecording || isFinishing }
+    var elapsedText: String {
+        String(format: "%02d:%02d:%02d", elapsedSeconds / 3600, elapsedSeconds / 60 % 60, elapsedSeconds % 60)
+    }
 
     func start(in directory: URL?, appBundleIdentifier: String?) async throws {
         guard !isBusy else { return }
@@ -68,24 +71,34 @@ final class Recorder: NSObject {
         }
         guard self.stream != nil else { throw RecordingError.couldNotStart }
         startedAt = Date()
-        showRecordingStatus()
+        startElapsedTimer()
     }
 
     @discardableResult
     func stop() async throws -> URL? {
-        guard let stream, let temporaryURL, let outputURL, !isFinishing else { return nil }
+        guard let stream, !isFinishing else { return nil }
         isFinishing = true
         defer { isFinishing = false }
-        hideRecordingStatus()
+        stopElapsedTimer()
         startedAt = nil
-        do {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                finishContinuation = continuation
-                Task {
-                    do { try await stream.stopCapture() }
-                    catch { finishRecording(with: error) }
-                }
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            finishContinuation = continuation
+            Task {
+                do { try await stream.stopCapture() }
+                catch { finishRecording(with: error) }
             }
+        }
+        return try await exportCapture()
+    }
+
+    // stop()으로 정상 종료했을 때든, macOS의 화면 녹화 중지 버튼 등으로
+    // 스트림이 예기치 않게 끊겼을 때든 항상 이 함수를 거쳐야 파일이 .m4a로 저장된다.
+    private func exportCapture() async throws -> URL? {
+        guard let temporaryURL, let outputURL else {
+            clearCapture()
+            return nil
+        }
+        do {
             let asset = AVURLAsset(url: temporaryURL)
             let audioTracks = try await asset.loadTracks(withMediaType: .audio)
             guard audioTracks.count == 1 else { throw RecordingError.exportFailed }
@@ -117,13 +130,17 @@ final class Recorder: NSObject {
 
     private func finishRecording(with error: Error? = nil) {
         guard let continuation = finishContinuation else {
-            guard stream != nil else { return }
-            errorMessage = error.map { "녹음 중단: \($0.localizedDescription)" } ?? "녹음이 예상치 않게 종료되었습니다."
-            hideRecordingStatus()
+            guard let stream else { return }
+            stopElapsedTimer()
             startedAt = nil
-            let stream = self.stream
-            clearCapture()
-            Task { try? await stream?.stopCapture() }
+            isFinishing = true
+            self.stream = nil
+            recordingOutput = nil
+            Task { @MainActor [weak self] in
+                try? await stream.stopCapture()
+                _ = try? await self?.exportCapture()
+                self?.isFinishing = false
+            }
             return
         }
         finishContinuation = nil
@@ -144,35 +161,20 @@ final class Recorder: NSObject {
         return formatter
     }()
 
-    private func showRecordingStatus() {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = NSImage(systemSymbolName: "record.circle.fill", accessibilityDescription: "녹음 중")
-        let menu = NSMenu()
-        let stopItem = NSMenuItem(title: "녹음 종료", action: #selector(stopFromStatusMenu), keyEquivalent: "")
-        stopItem.target = self
-        menu.addItem(stopItem)
-        item.menu = menu
-        statusItem = item
-        updateStatusTitle()
-        statusTimer = Timer.scheduledTimer(timeInterval: 1, target: self,
-                                           selector: #selector(updateStatusTitle), userInfo: nil, repeats: true)
+    private func startElapsedTimer() {
+        elapsedSeconds = 0
+        elapsedTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, let startedAt = self.startedAt else { return }
+                self.elapsedSeconds = Int(Date().timeIntervalSince(startedAt))
+            }
+        }
     }
 
-    @objc private func updateStatusTitle() {
-        guard let startedAt else { return }
-        let seconds = Int(Date().timeIntervalSince(startedAt))
-        statusItem?.button?.title = String(format: "%02d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
-    }
-
-    @objc private func stopFromStatusMenu() {
-        Task { try? await stop() }
-    }
-
-    private func hideRecordingStatus() {
-        statusTimer?.invalidate()
-        statusTimer = nil
-        if let statusItem { NSStatusBar.system.removeStatusItem(statusItem) }
-        statusItem = nil
+    private func stopElapsedTimer() {
+        elapsedTimer?.invalidate()
+        elapsedTimer = nil
+        elapsedSeconds = 0
     }
 
     private enum RecordingError: LocalizedError {

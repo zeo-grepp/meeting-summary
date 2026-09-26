@@ -142,7 +142,7 @@ final class DetectionCoordinator {
 
     private func handleAction(_ action: String, identifier: String) {
         guard identifier == activeCandidateID,
-              action == NotificationManager.startAction || action == NotificationManager.ignoreAction
+              action == NotificationManager.startAction || action == UNNotificationDismissActionIdentifier
                 || action == UNNotificationDefaultActionIdentifier else { return }
         activeCandidateID = nil
         notifications.removeCandidate(identifier)

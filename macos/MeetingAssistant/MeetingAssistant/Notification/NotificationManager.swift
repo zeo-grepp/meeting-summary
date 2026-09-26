@@ -21,7 +21,6 @@ private final class NotificationActionDelegate: NSObject, UNUserNotificationCent
 @MainActor @Observable
 final class NotificationManager {
     static let startAction = "START_RECORDING"
-    static let ignoreAction = "IGNORE_ONCE"
     private static let category = "MEETING_CANDIDATE"
     private let center = UNUserNotificationCenter.current()
     private let actionDelegate = NotificationActionDelegate()
@@ -38,10 +37,11 @@ final class NotificationManager {
         }
         center.delegate = actionDelegate
         center.setNotificationCategories([
+            // 배너는 액션이 둘 이상이면 "옵션" 메뉴로 접는다.
+            // 액션 하나만 두어 "녹음 시작"을 버튼으로 노출하고, 무시는 배너의 닫기(X)로 받는다.
             UNNotificationCategory(identifier: Self.category, actions: [
-                UNNotificationAction(identifier: Self.startAction, title: "녹음 시작", options: [.foreground]),
-                UNNotificationAction(identifier: Self.ignoreAction, title: "이번만 무시", options: [])
-            ], intentIdentifiers: [])
+                UNNotificationAction(identifier: Self.startAction, title: "녹음 시작", options: [.foreground])
+            ], intentIdentifiers: [], options: [.customDismissAction])
         ])
     }
 
@@ -83,7 +83,7 @@ final class NotificationManager {
         guard authorizationStatus == .authorized, alertsEnabled else { return nil }
         let content = UNMutableNotificationContent()
         content.title = "회의가 시작되었나요?"
-        content.body = "\(appName)이 실행 중이며 오디오 입력 사용이 시작되었습니다."
+        content.body = "\(appName) 사용 중 마이크 입력이 감지됐어요.\n지금 녹음을 시작해보세요."
         content.sound = .default
         content.categoryIdentifier = Self.category
         let identifier = UUID().uuidString
