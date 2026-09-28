@@ -262,7 +262,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "local.meeting-summary.MeetingAssistant";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.zeo.MeetingAssistant";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -285,7 +285,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "local.meeting-summary.MeetingAssistant";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.zeo.MeetingAssistant";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_COMPILATION_MODE = wholemodule;
@@ -305,7 +305,7 @@
 					"$(inherited)",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "local.meeting-summary.MeetingAssistantTests";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.zeo.MeetingAssistantTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -323,7 +323,7 @@
 					"$(inherited)",
 					"@loader_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "local.meeting-summary.MeetingAssistantTests";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.zeo.MeetingAssistantTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
