@@ -3,20 +3,19 @@ import XCTest
 @MainActor final class DetectionCoordinatorTests: XCTestCase {
     func testOnlyNewMicrophoneUseByWatchedAppTriggersWithinCooldown() {
         let now = Date(timeIntervalSince1970: 1_000)
-        func candidate(_ was: Bool, _ isOn: Bool, enabled: Bool = true, last: Date? = nil) -> Bool {
-            DetectionCoordinator.shouldNotify(wasOnMicrophone: was, isOnMicrophone: isOn,
+        func candidate(_ hasNew: Bool, enabled: Bool = true, last: Date? = nil) -> Bool {
+            DetectionCoordinator.shouldNotify(hasNewAppOnMicrophone: hasNew,
                                               enabled: enabled, lastNotificationAt: last, now: now)
         }
 
-        XCTAssertTrue(candidate(false, true))
-        // 브라우저처럼 늘 떠 있는 앱이라도 마이크를 잡은 순간에만 알린다.
-        XCTAssertFalse(candidate(true, true))
-        XCTAssertFalse(candidate(false, false))
-        XCTAssertFalse(candidate(false, true, enabled: false))
-        XCTAssertFalse(DetectionCoordinator.shouldNotify(wasOnMicrophone: false, isOnMicrophone: true,
+        XCTAssertTrue(candidate(true))
+        // 이미 마이크를 쓰고 있던 앱만 남아 있으면 새 회의가 아니다.
+        XCTAssertFalse(candidate(false))
+        XCTAssertFalse(candidate(true, enabled: false))
+        XCTAssertFalse(DetectionCoordinator.shouldNotify(hasNewAppOnMicrophone: true,
             enabled: true, recordingBusy: true, lastNotificationAt: nil, now: now))
-        XCTAssertFalse(candidate(false, true, last: now.addingTimeInterval(-59)))
-        XCTAssertTrue(candidate(false, true, last: now.addingTimeInterval(-60)))
+        XCTAssertFalse(candidate(true, last: now.addingTimeInterval(-59)))
+        XCTAssertTrue(candidate(true, last: now.addingTimeInterval(-60)))
     }
 
     func testHelperProcessesCountAsTheirApp() {

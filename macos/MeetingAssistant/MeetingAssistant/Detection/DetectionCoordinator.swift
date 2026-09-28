@@ -15,7 +15,10 @@ final class DetectionCoordinator {
     private var lastNotificationAt: Date?
     private var activeCandidateID: String?
     private var summaryNotificationID: String?
-    private var isWatchedAppOnMicrophone = false
+    /// 지금 마이크를 쓰고 있는 감시 앱들. 새로 들어온 앱을 가려내려고 직전 스냅샷으로 쓴다.
+    private var appIDsOnMicrophone: Set<String> = []
+    /// 알림을 띄운 대상 앱. 녹음 시작 버튼이 엉뚱한 앱을 녹음하지 않도록 들고 있는다.
+    private var activeCandidateApp: WatchedApplication?
     private var notificationInFlight = false
     private var recordingStartInFlight = false
     private(set) var runningApps: [WatchedApplication] = []
@@ -119,9 +122,10 @@ final class DetectionCoordinator {
         microphoneDetector.stop()
         if let id = activeCandidateID { notifications.removeCandidate(id) }
         activeCandidateID = nil
+        activeCandidateApp = nil
         runningApps = []
         microphoneState = .unknown
-        isWatchedAppOnMicrophone = false
+        appIDsOnMicrophone = []
     }
 
     /// 마이크를 실제로 쓰고 있는 감시 앱. 브라우저처럼 늘 떠 있는 앱은
@@ -133,18 +137,22 @@ final class DetectionCoordinator {
     private func updateMicrophone(_ next: MicrophoneState) {
         microphoneState = next
         let candidates = appsOnMicrophone
-        let previous = isWatchedAppOnMicrophone
-        isWatchedAppOnMicrophone = !candidates.isEmpty
+        let previous = appIDsOnMicrophone
+        appIDsOnMicrophone = Set(candidates.map(\.id))
         print("Meeting Assistant input: \(next), 마이크 사용: \(candidates.map(\.displayName))")
-        if !isWatchedAppOnMicrophone, let id = activeCandidateID {
+        // 알린 앱이 마이크를 놓으면 배너도 거둔다. 다른 앱이 계속 쓰고 있어도 그 회의는 끝난 것이다.
+        if let app = activeCandidateApp, !appIDsOnMicrophone.contains(app.id), let id = activeCandidateID {
             notifications.removeCandidate(id)
             activeCandidateID = nil
+            activeCandidateApp = nil
         }
-        guard Self.shouldNotify(wasOnMicrophone: previous, isOnMicrophone: isWatchedAppOnMicrophone,
+        // Discord처럼 마이크를 계속 열어두는 앱이 있어도, 새로 잡은 앱이 그 회의의 주인공이다.
+        let joined = candidates.first { !previous.contains($0.id) }
+        guard Self.shouldNotify(hasNewAppOnMicrophone: joined != nil,
                                 enabled: settings.notificationsEnabled,
                                 recordingBusy: recorder.isBusy || recordingStartInFlight,
                                 lastNotificationAt: lastNotificationAt,
-                                now: Date()), !notificationInFlight, let app = candidates.first else { return }
+                                now: Date()), !notificationInFlight, let app = joined else { return }
         print("Meeting Assistant candidate: \(app.displayName)")
         notificationInFlight = true
         Task {
@@ -155,8 +163,9 @@ final class DetectionCoordinator {
             }
             print("Meeting Assistant notification delivered: \(id)")
             lastNotificationAt = Date()
-            if isWatchedAppOnMicrophone && settings.notificationsEnabled {
+            if appIDsOnMicrophone.contains(app.id) && settings.notificationsEnabled {
                 activeCandidateID = id
+                activeCandidateApp = app
             } else {
                 notifications.removeCandidate(id)
             }
@@ -167,12 +176,13 @@ final class DetectionCoordinator {
         guard (!settings.notificationsEnabled || runningApps.isEmpty), let id = activeCandidateID else { return }
         notifications.removeCandidate(id)
         activeCandidateID = nil
+        activeCandidateApp = nil
     }
 
-    static func shouldNotify(wasOnMicrophone: Bool, isOnMicrophone: Bool,
+    static func shouldNotify(hasNewAppOnMicrophone: Bool,
                              enabled: Bool, recordingBusy: Bool = false,
                              lastNotificationAt: Date?, now: Date) -> Bool {
-        !wasOnMicrophone && isOnMicrophone && enabled && !recordingBusy
+        hasNewAppOnMicrophone && enabled && !recordingBusy
             && (lastNotificationAt.map { now.timeIntervalSince($0) >= 60 } ?? true)
     }
 
@@ -219,10 +229,13 @@ final class DetectionCoordinator {
         guard identifier == activeCandidateID,
               action == NotificationManager.startAction || action == UNNotificationDismissActionIdentifier
                 || action == UNNotificationDefaultActionIdentifier else { return }
+        let app = activeCandidateApp
         activeCandidateID = nil
+        activeCandidateApp = nil
         notifications.removeCandidate(identifier)
         // 배너 본문 클릭(default action)은 macOS 관례상 "앱 열기"다.
         // 녹음은 "녹음 시작" 버튼을 눌렀을 때만 시작한다.
-        if action == NotificationManager.startAction { startRecording() }
+        // 알림에 적힌 앱을 그대로 녹음한다 — 다른 앱이 마이크를 함께 쓰고 있어도 헷갈리지 않게.
+        if action == NotificationManager.startAction { startRecording(app: app) }
     }
 }
