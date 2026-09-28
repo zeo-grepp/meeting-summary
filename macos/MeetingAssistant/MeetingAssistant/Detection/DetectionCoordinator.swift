@@ -15,6 +15,7 @@ final class DetectionCoordinator {
     private var lastNotificationAt: Date?
     private var activeCandidateID: String?
     private var summaryNotificationID: String?
+    private var isWatchedAppOnMicrophone = false
     private var notificationInFlight = false
     private var recordingStartInFlight = false
     private(set) var runningApps: [WatchedApplication] = []
@@ -120,23 +121,30 @@ final class DetectionCoordinator {
         activeCandidateID = nil
         runningApps = []
         microphoneState = .unknown
+        isWatchedAppOnMicrophone = false
+    }
+
+    /// 마이크를 실제로 쓰고 있는 감시 앱. 브라우저처럼 늘 떠 있는 앱은
+    /// "실행 중"만으로는 회의를 시작했는지 알 수 없다.
+    private var appsOnMicrophone: [WatchedApplication] {
+        runningApps.filter { app in microphoneDetector.activeBundleIDs.contains(where: app.owns(audioProcess:)) }
     }
 
     private func updateMicrophone(_ next: MicrophoneState) {
-        let previous = microphoneState
         microphoneState = next
-        print("Meeting Assistant input: \(previous) → \(next), watched apps: \(runningApps.map(\.displayName))")
-        if next != .active, let id = activeCandidateID {
+        let candidates = appsOnMicrophone
+        let previous = isWatchedAppOnMicrophone
+        isWatchedAppOnMicrophone = !candidates.isEmpty
+        print("Meeting Assistant input: \(next), 마이크 사용: \(candidates.map(\.displayName))")
+        if !isWatchedAppOnMicrophone, let id = activeCandidateID {
             notifications.removeCandidate(id)
             activeCandidateID = nil
         }
-        guard Self.shouldNotify(previous: previous, current: next,
-                                hasWatchedApp: !runningApps.isEmpty,
+        guard Self.shouldNotify(wasOnMicrophone: previous, isOnMicrophone: isWatchedAppOnMicrophone,
                                 enabled: settings.notificationsEnabled,
                                 recordingBusy: recorder.isBusy || recordingStartInFlight,
                                 lastNotificationAt: lastNotificationAt,
-                                now: Date()), !notificationInFlight else { return }
-        let app = runningApps[0]
+                                now: Date()), !notificationInFlight, let app = candidates.first else { return }
         print("Meeting Assistant candidate: \(app.displayName)")
         notificationInFlight = true
         Task {
@@ -147,7 +155,7 @@ final class DetectionCoordinator {
             }
             print("Meeting Assistant notification delivered: \(id)")
             lastNotificationAt = Date()
-            if microphoneState == .active && settings.notificationsEnabled && !runningApps.isEmpty {
+            if isWatchedAppOnMicrophone && settings.notificationsEnabled {
                 activeCandidateID = id
             } else {
                 notifications.removeCandidate(id)
@@ -161,10 +169,10 @@ final class DetectionCoordinator {
         activeCandidateID = nil
     }
 
-    static func shouldNotify(previous: MicrophoneState, current: MicrophoneState,
-                             hasWatchedApp: Bool, enabled: Bool, recordingBusy: Bool = false,
+    static func shouldNotify(wasOnMicrophone: Bool, isOnMicrophone: Bool,
+                             enabled: Bool, recordingBusy: Bool = false,
                              lastNotificationAt: Date?, now: Date) -> Bool {
-        previous == .inactive && current == .active && hasWatchedApp && enabled && !recordingBusy
+        !wasOnMicrophone && isOnMicrophone && enabled && !recordingBusy
             && (lastNotificationAt.map { now.timeIntervalSince($0) >= 60 } ?? true)
     }
 
@@ -174,7 +182,8 @@ final class DetectionCoordinator {
         activeCandidateID = nil
         report(nil)
         recordingStartInFlight = true
-        let target = app ?? runningApps.first
+        // 감시 앱이 여럿 떠 있어도 마이크를 쥔 쪽이 회의다.
+        let target = app ?? appsOnMicrophone.first ?? runningApps.first
         recordingAppName = target?.displayName
         Task {
             defer { recordingStartInFlight = false }
