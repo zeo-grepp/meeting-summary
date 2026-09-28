@@ -6,3 +6,9 @@
 /transcripts/
 
 .DS_Store
+__pycache__/
+*.pyc
+
+# 팀 고유명사가 담긴 로컬 whisper 프롬프트 (meeting.py 참조)
+whisper_prompt.txt
+

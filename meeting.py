@@ -23,10 +23,17 @@ SUMMARIES_DIR = PROJECT_DIR / "summaries"
 WHISPER_MODEL = "mlx-community/whisper-large-v3-turbo"
 OLLAMA_MODEL = "gemma4:31b-mlx"
 
-WHISPER_INITIAL_PROMPT = """
+# 팀마다 자주 나오는 고유명사가 다르다. 사내 용어를 레포에 올리지 않도록
+# whisper_prompt.txt(gitignore됨)를 두면 그 내용이 아래 기본값을 대체한다.
+WHISPER_PROMPT_FILE = PROJECT_DIR / "whisper_prompt.txt"
+WHISPER_INITIAL_PROMPT = (
+    WHISPER_PROMPT_FILE.read_text(encoding="utf-8")
+    if WHISPER_PROMPT_FILE.exists()
+    else """
 개발팀 기술 회의입니다.
-주요 용어: Hera Webapp, Hera Client, ERB, Markdown, markdown-it, Flipper, API, CSS.
-""".strip()
+주요 용어: API, CSS, Markdown, 배포, 릴리스, 리팩터링, 마이그레이션.
+"""
+).strip()
 
 
 SYSTEM_PROMPT = """
