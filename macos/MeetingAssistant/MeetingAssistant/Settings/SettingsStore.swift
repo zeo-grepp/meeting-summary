@@ -26,11 +26,45 @@ final class SettingsStore {
             onDetectionSettingsChange?()
         }
     }
+    /// 사내 게이트웨이를 쓰면 주소와 모델 이름이 다르다.
+    var anthropicBaseURL: String {
+        didSet { defaults.set(anthropicBaseURL, forKey: "anthropicBaseURL") }
+    }
+    var anthropicModel: String {
+        didSet { defaults.set(anthropicModel, forKey: "anthropicModel") }
+    }
+    var notionDatabaseID: String {
+        didSet { defaults.set(notionDatabaseID, forKey: "notionDatabaseID") }
+    }
+    /// 전사 고유명사 보정. 팀마다 다르고, 배포본에는 붙어 있을 파일이 없다.
+    var transcriptionPrompt: String {
+        didSet { defaults.set(transcriptionPrompt, forKey: "transcriptionPrompt") }
+    }
+    /// 비밀값은 Keychain에만 둔다.
+    var anthropicAPIKey: String {
+        didSet { Keychain.set(anthropicAPIKey, for: "anthropicAPIKey") }
+    }
+    var notionToken: String {
+        didSet { Keychain.set(notionToken, for: "notionToken") }
+    }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         projectRootPath = defaults.string(forKey: "projectRootPath") ?? ""
         notificationsEnabled = defaults.bool(forKey: "notificationsEnabled")
+        // 저장값이 없으면 환경변수를 한 번 본다. Xcode scheme으로 돌려온 설정을 그대로 받는다.
+        let environment = ProcessInfo.processInfo.environment
+        func saved(_ key: String, _ variable: String, _ fallback: String = "") -> String {
+            defaults.string(forKey: key) ?? environment[variable] ?? fallback
+        }
+        anthropicBaseURL = saved("anthropicBaseURL", "ANTHROPIC_BASE_URL", "https://api.anthropic.com")
+        anthropicModel = saved("anthropicModel", "ANTHROPIC_MODEL", "claude-sonnet-5")
+        notionDatabaseID = saved("notionDatabaseID", "NOTION_DATABASE_ID")
+        transcriptionPrompt = defaults.string(forKey: "transcriptionPrompt") ?? ""
+        anthropicAPIKey = Keychain.string(for: "anthropicAPIKey").isEmpty
+            ? environment["ANTHROPIC_API_KEY"] ?? "" : Keychain.string(for: "anthropicAPIKey")
+        notionToken = Keychain.string(for: "notionToken").isEmpty
+            ? environment["NOTION_TOKEN"] ?? "" : Keychain.string(for: "notionToken")
         watchedApplications = []
         if let data = defaults.data(forKey: "watchedApplications") {
             do {

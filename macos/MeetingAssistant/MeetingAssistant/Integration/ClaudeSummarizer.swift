@@ -4,12 +4,16 @@ import Foundation
 ///
 /// 요청 하나뿐이라 SDK를 넣지 않고 URLSession으로 직접 친다.
 struct ClaudeSummarizer {
-    /// 사내 게이트웨이를 쓰면 여기가 달라진다. Phase 3에서 설정값으로 뺀다.
-    var baseURL = URL(string: ProcessInfo.processInfo.environment["ANTHROPIC_BASE_URL"]
-        ?? "https://api.anthropic.com")!
-    var apiKey = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] ?? ""
-    /// 게이트웨이마다 모델 이름에 접두사가 붙기도 한다. Phase 3에서 설정값으로 뺀다.
-    var model = ProcessInfo.processInfo.environment["ANTHROPIC_MODEL"] ?? "claude-sonnet-5"
+    /// 사내 게이트웨이를 쓰면 주소와 모델 이름이 둘 다 달라진다.
+    let baseURL: URL
+    let apiKey: String
+    let model: String
+
+    @MainActor init(settings: SettingsStore) {
+        baseURL = URL(string: settings.anthropicBaseURL) ?? URL(string: "https://api.anthropic.com")!
+        apiKey = settings.anthropicAPIKey
+        model = settings.anthropicModel
+    }
 
     struct Summary {
         let title: String
@@ -17,6 +21,16 @@ struct ClaudeSummarizer {
     }
 
     func summarize(transcript: String) async throws -> Summary {
+        try await parse(send(body(transcript: transcript)))
+    }
+
+    /// 설정 화면의 "연결 테스트". 회의가 끝난 뒤 5분 기다려서 실패를 알게 되는 일을 막는다.
+    func ping() async throws {
+        _ = try await send(["model": model, "max_tokens": 1,
+                            "messages": [["role": "user", "content": "."]]])
+    }
+
+    private func send(_ body: [String: Any]) async throws -> Data {
         guard !apiKey.isEmpty else { throw SummarizerError.noAPIKey }
 
         var request = URLRequest(url: baseURL.appending(path: "v1/messages"))
@@ -26,14 +40,14 @@ struct ClaudeSummarizer {
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         // 1시간 회의는 출력이 길다. 기본 60초로는 모자란다.
         request.timeoutInterval = 300
-        request.httpBody = try JSONSerialization.data(withJSONObject: body(transcript: transcript))
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw SummarizerError.badResponse("응답 없음") }
         guard http.statusCode == 200 else {
             throw SummarizerError.badResponse("HTTP \(http.statusCode) — \(String(decoding: data.prefix(300), as: UTF8.self))")
         }
-        return try parse(data)
+        return data
     }
 
     /// Ollama의 format=RESPONSE_FORMAT에 해당하는 것이 Claude에는 없다.

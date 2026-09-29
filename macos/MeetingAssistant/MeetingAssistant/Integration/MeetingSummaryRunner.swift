@@ -16,11 +16,14 @@ final class MeetingSummaryRunner {
     private(set) var errorMessage: String?
     /// 모델 로드가 최초 1분을 넘는다. 회의마다 새로 만들지 않도록 하나를 들고 쓴다.
     @ObservationIgnored private let transcriber = Transcriber()
-    @ObservationIgnored private let summarizer = ClaudeSummarizer()
-    @ObservationIgnored private let notion = NotionUploader()
+    @ObservationIgnored private let settings: SettingsStore
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var pending: [(audio: URL, projectRoot: URL)] = []
     @ObservationIgnored var onFinish: ((URL) -> Void)?
+
+    init(settings: SettingsStore) {
+        self.settings = settings
+    }
 
     var isRunning: Bool { stage != nil }
     var stageText: String? {
@@ -57,12 +60,12 @@ final class MeetingSummaryRunner {
 
         do {
             stage = .transcribing
-            await transcriber.setPrompt(Self.transcriptionPrompt(in: projectRoot))
+            await transcriber.setPrompt(settings.transcriptionPrompt)
             let transcript = try await transcriber.transcribe(audio)
             try write(transcript, to: projectRoot.appending(path: "transcripts/\(stem).txt"))
 
             stage = .summarizing
-            let summary = try await summarizer.summarize(transcript: transcript)
+            let summary = try await ClaudeSummarizer(settings: settings).summarize(transcript: transcript)
             let summaryURL = projectRoot.appending(path: "summaries/\(stem).md")
             try write(Self.markdown(summary, recordedAt: Self.recordedDate(of: audio)), to: summaryURL)
 
@@ -70,6 +73,7 @@ final class MeetingSummaryRunner {
             lastNotionURL = nil
 
             // 여기서부터는 실패해도 회의록은 이미 디스크에 있다. 사유만 남기고 완료로 친다.
+            let notion = NotionUploader(settings: settings)
             if notion.isEnabled {
                 stage = .uploading
                 do {
@@ -98,14 +102,6 @@ final class MeetingSummaryRunner {
     private func write(_ text: String, to url: URL) throws {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try text.write(to: url, atomically: true, encoding: .utf8)
-    }
-
-    /// 팀마다 자주 나오는 고유명사가 다르다. meeting.py와 같은 파일을 읽는다.
-    /// Phase 3에서 설정 필드로 올린다.
-    private static func transcriptionPrompt(in projectRoot: URL) -> String {
-        let file = projectRoot.appending(path: "whisper_prompt.txt")
-        return (try? String(contentsOf: file, encoding: .utf8))?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
     /// 어제 녹음을 오늘 처리해도 회의 날짜는 녹음한 날이다.
