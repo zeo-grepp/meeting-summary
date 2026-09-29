@@ -32,6 +32,7 @@
 		153EB8DD30658DB90058212C /* MeetingAssistant/Detection/DetectionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000028 /* MeetingAssistant/Detection/DetectionCoordinator.swift */; };
 		0000000000000000000000B1 /* MeetingAssistant/Transcription/Transcriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000B0 /* MeetingAssistant/Transcription/Transcriber.swift */; };
 		0000000000000000000000B4 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0000000000000000000000B3 /* WhisperKit */; };
+		0000000000000000000000B6 /* MeetingAssistant/Integration/ClaudeSummarizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000B5 /* MeetingAssistant/Integration/ClaudeSummarizer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +56,7 @@
 		000000000000000000000033 /* MeetingAssistant/MeetingAssistant.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = MeetingAssistant/MeetingAssistant.entitlements; sourceTree = "<group>"; };
 		0000000000000000000000A0 /* MeetingAssistant/Resources/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = MeetingAssistant/Resources/Assets.xcassets; sourceTree = "<group>"; };
 		0000000000000000000000B0 /* MeetingAssistant/Transcription/Transcriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/Transcription/Transcriber.swift; sourceTree = "<group>"; };
+		0000000000000000000000B5 /* MeetingAssistant/Integration/ClaudeSummarizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/Integration/ClaudeSummarizer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -105,6 +107,7 @@
 				000000000000000000000032 /* MeetingAssistant/Recording/Recorder.swift */,
 				0000000000000000000000A2 /* MeetingAssistant/Integration/MeetingSummaryRunner.swift */,
 				0000000000000000000000B0 /* MeetingAssistant/Transcription/Transcriber.swift */,
+				0000000000000000000000B5 /* MeetingAssistant/Integration/ClaudeSummarizer.swift */,
 				000000000000000000000033 /* MeetingAssistant/MeetingAssistant.entitlements */,
 				00000000000000000000000B /* Products */,
 			);
@@ -209,6 +212,7 @@
 				000000000000000000000034 /* MeetingAssistant/Recording/Recorder.swift in Sources */,
 				0000000000000000000000A3 /* MeetingAssistant/Integration/MeetingSummaryRunner.swift in Sources */,
 				0000000000000000000000B1 /* MeetingAssistant/Transcription/Transcriber.swift in Sources */,
+				0000000000000000000000B6 /* MeetingAssistant/Integration/ClaudeSummarizer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
