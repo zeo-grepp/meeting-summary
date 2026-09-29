@@ -1,4 +1,4 @@
-# Meeting Assistant — Phase 3
+# Meeting Assistant
 
 macOS 26.0 이상을 대상으로 하는 로컬 메뉴바 앱입니다. 현재 검증 환경은 macOS 26.6 / Xcode 27.0입니다. 전사에 WhisperKit(SPM)을 사용합니다.
 
@@ -17,7 +17,7 @@ macOS 26.0 이상을 대상으로 하는 로컬 메뉴바 앱입니다. 현재 �
 
 알림 권한 요청에 `Notifications are not allowed for this application`이 표시되고 시스템 설정 목록에도 앱이 없다면, 다른 위치에서 실행 중인 Meeting Assistant를 모두 종료한 뒤 Xcode의 **Run**으로 다시 실행해 **알림 권한 요청**을 누릅니다. 이번 환경에서는 `/tmp`에서 실행된 별도 검증용 앱의 요청은 실패했지만, Xcode에서 실행한 앱의 요청은 성공했고 시스템 설정 목록에 앱이 표시되었습니다. 목록의 **Meeting Assistant** 알림 스위치를 켜면 됩니다.
 
-기본 서명은 개인 로컬 실행용 ad-hoc입니다. App Sandbox는 꺼져 있습니다. 배포용 서명/공증 설정은 포함하지 않습니다. 설정은 앱의 UserDefaults(`local.meeting-summary.MeetingAssistant`)에 저장하며 저장소 파일에는 쓰지 않습니다.
+Xcode에서 돌릴 때는 `Apple Development`로 서명합니다. 팀원에게 나눠줄 빌드는 아래 **배포**를 봅니다. App Sandbox는 꺼져 있습니다 — 켜면 사용자가 고른 저장 폴더에 보안 스코프 북마크가 필요해지는데, 공증만으로 배포가 되므로 그 값을 치르지 않습니다. Hardened Runtime은 켜져 있습니다. 설정은 `com.zeo.MeetingAssistant`의 UserDefaults에 저장하고, API 키와 노션 토큰은 Keychain에만 둡니다. 저장소 파일에는 쓰지 않습니다.
 
 ## 구현 범위
 
@@ -32,6 +32,28 @@ macOS 26.0 이상을 대상으로 하는 로컬 메뉴바 앱입니다. 현재 �
 - 명시적 시작 시 마이크와 화면·시스템 오디오 권한 요청, 감시 앱 출력과 마이크 동시 캡처, 녹음 중 재알림 억제, 종료 시 `.m4a` 파일 저장 및 재생 확인
 
 앱 실행만으로 권한을 요청하거나 녹음을 시작하지 않습니다. 녹음 중간에는 숨김 `.mp4` 파일을 사용하고, 정상 종료 후 오디오만 `.m4a`로 변환해 중간 파일을 제거합니다. 권한을 새로 허용한 경우 macOS가 앱 재시작을 요구할 수 있습니다. 녹음이 끝나면 앱이 이어서 전사(WhisperKit)와 요약(Claude API)을 돌려 `summaries/`에 회의록 `.md`를 남깁니다. 요약에는 Claude API 키가 필요하고, 노션 업로드를 켜면 회의록 DB에 페이지도 만듭니다. 둘 다 **설정**에서 입력하며 키와 토큰은 Keychain에 저장합니다(설정 화면의 연결 테스트로 미리 확인할 수 있습니다). 노션을 비워두면 로컬 `.md`까지만 만듭니다. 오디오 입력 사용은 특정 앱의 회의나 발화를 뜻하지 않습니다.
+
+## 배포
+
+```sh
+./release.sh
+```
+
+archive → Developer ID 서명 → 공증 → staple → `.zip`까지 한 번에 합니다. 결과물을 GitHub Releases에 올리고 링크를 보내면 됩니다. 자동 업데이트는 넣지 않습니다.
+
+미리 준비할 것이 둘 있습니다.
+
+1. **Developer ID Application 인증서.** `Apple Development` 서명본은 그 팀의 프로비저닝이 등록된 맥에서만 열립니다. 이 인증서는 Apple Developer Program의 **Account Holder만** 발급할 수 있습니다 — 아직 준비되지 않았습니다. 진행 상황은 [#6](https://github.com/zeo-grepp/meeting-summary/issues/6)을 봅니다.
+2. **공증 자격증명.** 한 번만 저장해두면 스크립트가 알아서 씁니다.
+
+   ```sh
+   xcrun notarytool store-credentials meeting-assistant \
+     --apple-id <계정> --team-id <팀 id> --password <앱 전용 암호>
+   ```
+
+팀 id와 프로파일 이름은 `TEAM_ID`, `NOTARY_PROFILE` 환경변수로 덮을 수 있습니다.
+
+받는 사람은 `.zip`을 풀어 `/Applications`에 넣고 열면 됩니다. 설정에서 키를 채우는 것 외에 할 일이 없습니다.
 
 ## 빌드와 테스트
 
