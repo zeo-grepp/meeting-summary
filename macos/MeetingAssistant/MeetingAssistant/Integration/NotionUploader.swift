@@ -10,9 +10,10 @@ struct NotionUploader {
     var titleProperty = ProcessInfo.processInfo.environment["NOTION_TITLE_PROPERTY"] ?? "이름"
     /// 날짜 속성이 없는 DB도 있다. 비워두면 안 쓴다.
     var dateProperty = ProcessInfo.processInfo.environment["NOTION_DATE_PROPERTY"] ?? ""
-    /// DB를 select로 걸러 보는 뷰가 있으면 이걸 채워야 그 뷰에 뜬다. 둘 다 있어야 쓴다.
-    var selectProperty = ProcessInfo.processInfo.environment["NOTION_SELECT_PROPERTY"] ?? ""
-    var selectValue = ProcessInfo.processInfo.environment["NOTION_SELECT_VALUE"] ?? ""
+    /// DB를 select로 걸러 보는 뷰가 있으면 이걸 채워야 그 뷰에 뜬다.
+    /// 그런 속성이 없는 DB라면 둘 중 하나를 비워 끈다 — 없는 속성을 보내면 요청 전체가 400이다.
+    var selectProperty = ProcessInfo.processInfo.environment["NOTION_SELECT_PROPERTY"] ?? "카테고리"
+    var selectValue = ProcessInfo.processInfo.environment["NOTION_SELECT_VALUE"] ?? "회의록"
 
     var isEnabled: Bool { !token.isEmpty && !databaseID.isEmpty }
 
