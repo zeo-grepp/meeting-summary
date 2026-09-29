@@ -8,6 +8,9 @@ struct SettingsView: View {
     let notifications: NotificationManager
     @State private var microphoneGranted = false
     @State private var screenRecordingGranted = false
+    @State private var claudeTest: String?
+    @State private var notionTest: String?
+    @State private var testing = false
 
     var body: some View {
         Form {
@@ -121,6 +124,44 @@ struct SettingsView: View {
                 Text("고른 폴더 안의 recordings에 .m4a로, summaries에 회의록 .md로 저장됩니다.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            // 키를 잘못 넣은 걸 회의가 끝나고 5분 뒤에 알게 되면 그 회의는 이미 날아간 뒤다.
+            Section("요약 (Claude API)") {
+                SecureField("API 키", text: $settings.anthropicAPIKey, prompt: Text("sk-ant-…"))
+                TextField("주소", text: $settings.anthropicBaseURL)
+                TextField("모델", text: $settings.anthropicModel)
+                HStack {
+                    Button("연결 테스트") {
+                        run { try await ClaudeSummarizer(settings: settings).ping() }
+                            then: { claudeTest = $0 }
+                    }
+                    .disabled(testing || settings.anthropicAPIKey.isEmpty)
+                    if let claudeTest { Text(claudeTest).font(.caption) }
+                }
+                Text("키는 Keychain에 저장합니다. 사내 게이트웨이를 쓰면 주소와 모델 이름이 공개 API와 다릅니다.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            // 노션은 선택 기능이다. 비워두면 로컬 .md까지만 만든다.
+            Section("노션 업로드 (선택)") {
+                SecureField("토큰", text: $settings.notionToken, prompt: Text("ntn_…"))
+                TextField("회의록 DB id", text: $settings.notionDatabaseID)
+                HStack {
+                    Button("연결 테스트") {
+                        run { try await NotionUploader(settings: settings).ping() }
+                            then: { notionTest = $0 }
+                    }
+                    .disabled(testing || settings.notionToken.isEmpty || settings.notionDatabaseID.isEmpty)
+                    if let notionTest { Text(notionTest).font(.caption) }
+                }
+                Text("DB URL의 32자리가 id입니다. 토큰을 만들 때 그 DB를 접근 허용 목록에 넣어야 합니다 — 빠뜨리면 토큰이 맞아도 실패합니다.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("전사 용어 보정") {
+                TextField("자주 나오는 고유명사", text: $settings.transcriptionPrompt,
+                          prompt: Text("쉼표로 구분해 적습니다"), axis: .vertical)
+                    .lineLimit(2 ... 5)
+                Text("팀 이름, 서비스 이름처럼 잘못 들리는 말을 적어두면 전사가 그쪽으로 맞춥니다.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if let error = settings.errorMessage {
                 Section("설정 오류") {
                     Text(error).foregroundStyle(.red).textSelection(.enabled)
@@ -139,6 +180,22 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task { await notifications.refresh() }
             refreshPermissions()
+        }
+    }
+
+    /// 연결 테스트 둘이 같은 모양이다 — 돌리고, 성공하면 초록 한 줄, 실패하면 이유를 그대로 보여준다.
+    private func run<T>(_ work: @escaping () async throws -> T,
+                        then show: @escaping (String) -> Void) {
+        testing = true
+        show("확인 중…")
+        Task {
+            do {
+                let result = try await work()
+                show("성공\((result as? String).map { " — \($0)" } ?? "")")
+            } catch {
+                show(error.localizedDescription)
+            }
+            testing = false
         }
     }
 
