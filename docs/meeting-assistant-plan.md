@@ -2,6 +2,12 @@
 
 작성일: 2026-09-23. 이번 작업은 조사와 계획 작성이며 앱 구현은 포함하지 않는다.
 
+> **이 문서는 최초 설계 기록이다. 아래 내용은 지금과 다르다.**
+> Python(`meeting.py`, `.venv`, mlx-whisper, Ollama)은 전부 제거했다. 전사는 WhisperKit,
+> 요약은 Claude API, 회의록은 노션 DB 업로드로 바뀌었고 키는 Keychain에 둔다.
+> 여기 나오는 "Phase 4"는 그때의 Python 연동 단계를 가리키며, 지금의 배포 단계와 무관하다.
+> 현재 구조는 `macos/MeetingAssistant/README.md`를 본다.
+
 ## 1. 현재 프로젝트에서 확인한 사실
 
 ```text

@@ -15,3 +15,6 @@ whisper_prompt.txt
 
 # Xcode 개인 설정 — 사람마다 다르다
 xcuserdata/
+
+# 배포 산출물
+macos/MeetingAssistant/build/
