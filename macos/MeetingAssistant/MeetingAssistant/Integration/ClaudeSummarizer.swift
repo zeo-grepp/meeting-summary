@@ -8,7 +8,8 @@ struct ClaudeSummarizer {
     var baseURL = URL(string: ProcessInfo.processInfo.environment["ANTHROPIC_BASE_URL"]
         ?? "https://api.anthropic.com")!
     var apiKey = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] ?? ""
-    var model = "claude-sonnet-5"
+    /// 게이트웨이마다 모델 이름에 접두사가 붙기도 한다. Phase 3에서 설정값으로 뺀다.
+    var model = ProcessInfo.processInfo.environment["ANTHROPIC_MODEL"] ?? "claude-sonnet-5"
 
     struct Summary {
         let title: String
@@ -41,7 +42,6 @@ struct ClaudeSummarizer {
         [
             "model": model,
             "max_tokens": 8192,
-            "temperature": 0,
             "system": Self.systemPrompt,
             "tools": [[
                 "name": Self.toolName,
