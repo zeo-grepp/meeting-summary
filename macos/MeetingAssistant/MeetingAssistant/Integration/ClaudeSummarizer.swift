@@ -10,9 +10,17 @@ struct ClaudeSummarizer {
     let model: String
 
     @MainActor init(settings: SettingsStore) {
-        baseURL = URL(string: settings.anthropicBaseURL) ?? URL(string: "https://api.anthropic.com")!
+        baseURL = Self.normalize(settings.anthropicBaseURL)
         apiKey = settings.anthropicAPIKey
         model = settings.anthropicModel
+    }
+
+    /// 게이트웨이 문서가 알려주는 주소에는 `/v1`이 이미 붙어 있기도 하다.
+    /// 그대로 두면 `/v1/v1/messages`로 가서 404가 난다. 끝의 `/v1`과 슬래시를 떼고 쓴다.
+    static func normalize(_ baseURL: String) -> URL {
+        let trimmed = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "/+(v1/*)?$", with: "", options: .regularExpression)
+        return URL(string: trimmed) ?? URL(string: "https://api.anthropic.com")!
     }
 
     struct Summary {

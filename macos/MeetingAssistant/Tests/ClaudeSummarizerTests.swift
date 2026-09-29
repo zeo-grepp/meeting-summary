@@ -1,6 +1,23 @@
 import XCTest
 
 final class ClaudeSummarizerTests: XCTestCase {
+    /// 게이트웨이 주소를 어떻게 적어 오든 `v1/messages`를 한 번만 붙인 주소가 나와야 한다.
+    func testBaseURLEndsWithoutVersionSegment() throws {
+        for written in ["https://gateway.example.com",
+                        "https://gateway.example.com/",
+                        "https://gateway.example.com/v1",
+                        "https://gateway.example.com/v1/",
+                        "  https://gateway.example.com/v1  "] {
+            XCTAssertEqual(ClaudeSummarizer.normalize(written).appending(path: "v1/messages").absoluteString,
+                           "https://gateway.example.com/v1/messages", "입력: \(written)")
+        }
+    }
+
+    /// 주소를 지웠다고 요약이 죽으면 안 된다. 공개 API로 돌아간다.
+    func testEmptyAddressFallsBackToPublicAPI() throws {
+        XCTAssertEqual(ClaudeSummarizer.normalize("").absoluteString, "https://api.anthropic.com")
+    }
+
     /// 정상 경로. 도구를 쓴 응답에서 회의록을 꺼낸다.
     func testToolUseBlockIsRead() throws {
         let data = Data("""
