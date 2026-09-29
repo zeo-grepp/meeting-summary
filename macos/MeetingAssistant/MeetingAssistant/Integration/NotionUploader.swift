@@ -8,7 +8,8 @@ struct NotionUploader {
     var databaseID = ProcessInfo.processInfo.environment["NOTION_DATABASE_ID"] ?? ""
     /// DB마다 속성 이름이 다르다. Phase 3에서 설정값으로 뺀다.
     var titleProperty = ProcessInfo.processInfo.environment["NOTION_TITLE_PROPERTY"] ?? "이름"
-    var dateProperty = ProcessInfo.processInfo.environment["NOTION_DATE_PROPERTY"] ?? "날짜"
+    /// 날짜 속성이 없는 DB도 있다. 비워두면 안 쓴다.
+    var dateProperty = ProcessInfo.processInfo.environment["NOTION_DATE_PROPERTY"] ?? ""
 
     var isEnabled: Bool { !token.isEmpty && !databaseID.isEmpty }
 
@@ -21,12 +22,15 @@ struct NotionUploader {
             Array(blocks[$0 ..< min($0 + 100, blocks.count)])
         }
 
+        var properties: [String: Any] = [
+            titleProperty: ["title": [["text": ["content": String(title.prefix(2000))]]]]
+        ]
+        if !dateProperty.isEmpty {
+            properties[dateProperty] = ["date": ["start": Self.day.string(from: date)]]
+        }
         let page = try await send(method: "POST", path: "v1/pages", body: [
             "parent": ["database_id": databaseID],
-            "properties": [
-                titleProperty: ["title": [["text": ["content": String(title.prefix(2000))]]]],
-                dateProperty: ["date": ["start": Self.day.string(from: date)]],
-            ],
+            "properties": properties,
             "children": chunks.first ?? [],
         ])
 
