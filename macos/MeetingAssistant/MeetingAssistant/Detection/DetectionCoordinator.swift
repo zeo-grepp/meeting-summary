@@ -193,13 +193,11 @@ final class DetectionCoordinator {
         activeCandidateID = nil
         report(nil)
         recordingStartInFlight = true
-        // 감시 앱이 여럿 떠 있어도 마이크를 쥔 쪽이 회의다.
-        let target = app ?? appsOnMicrophone.first ?? runningApps.first
-        recordingAppName = target?.displayName
+        // 소리는 화면 전체에서 받는다. 앱 이름은 "무엇을 녹음 중인지" 표시에만 쓴다.
+        recordingAppName = (app ?? appsOnMicrophone.first ?? runningApps.first)?.displayName
         Task {
             defer { recordingStartInFlight = false }
-            do { try await recorder.start(in: settings.recordingsURL,
-                                          appBundleIdentifier: target?.bundleIdentifier) }
+            do { try await recorder.start(in: settings.recordingsURL) }
             catch {
                 recordingAppName = nil
                 report(error.localizedDescription)

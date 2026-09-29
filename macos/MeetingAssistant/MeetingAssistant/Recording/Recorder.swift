@@ -32,20 +32,16 @@ final class Recorder: NSObject {
             : String(format: "%02d:%02d", minutes, seconds)
     }
 
-    func start(in directory: URL?, appBundleIdentifier: String?) async throws {
+    func start(in directory: URL?) async throws {
         guard !isBusy else { return }
-        guard let directory, FileManager.default.fileExists(atPath: directory.deletingLastPathComponent()
-            .appendingPathComponent("meeting.py").path) else { throw RecordingError.projectNotSelected }
-        guard let appBundleIdentifier else { throw RecordingError.appNotRunning }
+        guard let directory else { throw RecordingError.projectNotSelected }
         isStarting = true
         errorMessage = nil
         defer { isStarting = false }
 
         guard await AVAudioApplication.requestRecordPermission() else { throw RecordingError.microphoneDenied }
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-        guard let display = content.displays.first,
-              let app = content.applications.first(where: { $0.bundleIdentifier == appBundleIdentifier })
-        else { throw RecordingError.appNotRunning }
+        guard let display = content.displays.first else { throw RecordingError.couldNotStart }
 
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let name = "\(Self.filenameDateFormatter.string(from: Date()))-\(UUID().uuidString.prefix(8))"
@@ -60,7 +56,8 @@ final class Recorder: NSObject {
         configuration.width = 16
         configuration.height = 16
         configuration.minimumFrameInterval = CMTime(value: 1, timescale: 1)
-        let filter = SCContentFilter(display: display, including: [app], exceptingWindows: [])
+        // 화면 전체의 소리를 받는다. 회의가 어느 앱에서 열리든(브라우저 탭, 통화 앱) 놓치지 않는다.
+        let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
         let stream = SCStream(filter: filter, configuration: configuration, delegate: self)
         let fileConfiguration = SCRecordingOutputConfiguration()
         fileConfiguration.outputURL = temporaryURL
@@ -190,12 +187,11 @@ final class Recorder: NSObject {
     }
 
     private enum RecordingError: LocalizedError {
-        case projectNotSelected, appNotRunning, microphoneDenied, couldNotStart, exportFailed, emptyFile
+        case projectNotSelected, microphoneDenied, couldNotStart, exportFailed, emptyFile
 
         var errorDescription: String? {
             switch self {
-            case .projectNotSelected: "설정에서 meeting.py가 있는 프로젝트 폴더를 먼저 선택해주세요."
-            case .appNotRunning: "녹음할 감시 앱을 실행한 뒤 다시 시도해주세요."
+            case .projectNotSelected: "설정에서 저장 폴더를 먼저 선택해주세요."
             case .microphoneDenied: "마이크 권한이 없습니다. 시스템 설정 > 개인정보 보호 및 보안 > 마이크에서 Meeting Assistant를 허용해주세요."
             case .couldNotStart: "앱 소리 녹음을 시작하지 못했습니다. 화면·시스템 오디오 녹음 권한을 확인해주세요."
             case .exportFailed: "녹음을 .m4a 파일로 변환하지 못했습니다."

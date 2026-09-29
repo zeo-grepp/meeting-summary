@@ -20,10 +20,6 @@ struct MenuBarView: View {
     private var startBlockReason: String? {
         guard !detection.recorder.isBusy else { return nil }
         if settings.recordingsURL == nil { return "설정에서 저장 폴더를 먼저 선택해주세요." }
-        if !settings.watchedApplications.contains(where: \.isEnabled) {
-            return "설정에서 감시할 앱을 먼저 추가해주세요."
-        }
-        if detection.runningApps.isEmpty { return "감시 앱이 실행 중이 아닙니다." }
         return nil
     }
 
@@ -65,18 +61,9 @@ struct MenuBarView: View {
         if let startBlockReason { Text(startBlockReason) }
         if detection.recorder.isRecording {
             Button("녹음 종료") { detection.stopRecording() }
-        } else if detection.runningApps.count > 1 {
-            // 어느 앱 소리를 녹음할지 조용히 고르지 않고 직접 고르게 한다.
-            Menu("녹음 시작") {
-                ForEach(detection.runningApps) { app in
-                    Button(app.displayName) { detection.startRecording(app: app) }
-                }
-            }
-            .disabled(detection.recorder.isBusy || settings.recordingsURL == nil)
         } else {
             Button("녹음 시작") { detection.startRecording() }
-                .disabled(detection.recorder.isBusy || settings.recordingsURL == nil
-                          || detection.runningApps.isEmpty)
+                .disabled(detection.recorder.isBusy || settings.recordingsURL == nil)
         }
         Button("녹음 폴더 열기") {
             guard let url = settings.recordingsURL else { return }
