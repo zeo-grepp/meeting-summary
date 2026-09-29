@@ -43,7 +43,7 @@ archive → Developer ID 서명 → 공증 → staple → `.zip`까지 한 번�
 
 미리 준비할 것이 둘 있습니다.
 
-1. **Developer ID Application 인증서.** 유료 Apple Developer Program 멤버십이 필요합니다. `Apple Development` 서명본은 그 팀의 프로비저닝이 등록된 맥에서만 열립니다.
+1. **Developer ID Application 인증서.** `Apple Development` 서명본은 그 팀의 프로비저닝이 등록된 맥에서만 열립니다. 이 인증서는 Apple Developer Program의 **Account Holder만** 발급할 수 있습니다 — 아직 준비되지 않았습니다. 진행 상황은 [#6](https://github.com/zeo-grepp/meeting-summary/issues/6)을 봅니다.
 2. **공증 자격증명.** 한 번만 저장해두면 스크립트가 알아서 씁니다.
 
    ```sh
