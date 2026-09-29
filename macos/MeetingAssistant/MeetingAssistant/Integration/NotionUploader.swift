@@ -4,16 +4,21 @@ import Foundation
 ///
 /// 설정이 비어 있으면 그냥 안 올린다 — 노션은 선택 기능이고, 로컬 .md는 어차피 남는다.
 struct NotionUploader {
-    var token = ProcessInfo.processInfo.environment["NOTION_TOKEN"] ?? ""
-    var databaseID = ProcessInfo.processInfo.environment["NOTION_DATABASE_ID"] ?? ""
-    /// DB마다 속성 이름이 다르다. Phase 3에서 설정값으로 뺀다.
+    let token: String
+    let databaseID: String
+    /// 속성 이름은 팀이 같은 DB를 쓰는 동안 바뀌지 않는다. 설정 화면에 올리지 않고
+    /// 환경변수로만 덮는다 — 없는 속성을 보내면 요청 전체가 400이라 아무나 만질 값이 아니다.
     var titleProperty = ProcessInfo.processInfo.environment["NOTION_TITLE_PROPERTY"] ?? "이름"
     /// 날짜 속성이 없는 DB도 있다. 비워두면 안 쓴다.
     var dateProperty = ProcessInfo.processInfo.environment["NOTION_DATE_PROPERTY"] ?? ""
     /// DB를 select로 걸러 보는 뷰가 있으면 이걸 채워야 그 뷰에 뜬다.
-    /// 그런 속성이 없는 DB라면 둘 중 하나를 비워 끈다 — 없는 속성을 보내면 요청 전체가 400이다.
     var selectProperty = ProcessInfo.processInfo.environment["NOTION_SELECT_PROPERTY"] ?? "카테고리"
     var selectValue = ProcessInfo.processInfo.environment["NOTION_SELECT_VALUE"] ?? "회의록"
+
+    @MainActor init(settings: SettingsStore) {
+        token = settings.notionToken
+        databaseID = settings.notionDatabaseID
+    }
 
     var isEnabled: Bool { !token.isEmpty && !databaseID.isEmpty }
 
@@ -51,14 +56,23 @@ struct NotionUploader {
         return url
     }
 
-    private func send(method: String, path: String, body: [String: Any]) async throws -> [String: Any] {
+    /// 설정 화면의 "연결 테스트". DB를 읽어 이름을 돌려준다.
+    /// 통합을 DB에 연결하지 않았으면 여기서 404가 난다 — 회의가 끝난 뒤가 아니라 지금 알아야 한다.
+    func ping() async throws -> String {
+        let database = try await send(method: "GET", path: "v1/databases/\(databaseID)", body: nil)
+        let title = (database["title"] as? [[String: Any]])?
+            .compactMap { $0["plain_text"] as? String }.joined() ?? ""
+        return title.isEmpty ? "(이름 없는 DB)" : title
+    }
+
+    private func send(method: String, path: String, body: [String: Any]?) async throws -> [String: Any] {
         guard isEnabled else { throw NotionError.notConfigured }
         var request = URLRequest(url: URL(string: "https://api.notion.com/")!.appending(path: path))
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("2022-06-28", forHTTPHeaderField: "Notion-Version")
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        if let body { request.httpBody = try JSONSerialization.data(withJSONObject: body) }
 
         let (data, response) = try await URLSession.shared.data(for: request)
         let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]

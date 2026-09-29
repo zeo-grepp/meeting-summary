@@ -7,7 +7,7 @@ import UserNotifications
 @MainActor @Observable
 final class DetectionCoordinator {
     let recorder = Recorder()
-    let summaryRunner = MeetingSummaryRunner()
+    let summaryRunner: MeetingSummaryRunner
     private let settings: SettingsStore
     private let notifications: NotificationManager
     private let appDetector: AppDetector
@@ -45,6 +45,7 @@ final class DetectionCoordinator {
     init(settings: SettingsStore, notifications: NotificationManager) {
         self.settings = settings
         self.notifications = notifications
+        summaryRunner = MeetingSummaryRunner(settings: settings)
         appDetector = AppDetector(settings: settings)
         recorder.onSaved = { [weak self] url in self?.handleSavedRecording(url) }
         summaryRunner.onFinish = { [weak self] url in self?.announceSummary(url) }
