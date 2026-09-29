@@ -117,8 +117,8 @@ struct SettingsView: View {
                 Text(settings.recordingsURL?.path(percentEncoded: false) ?? "선택하지 않음")
                     .textSelection(.enabled)
                     .lineLimit(nil)
-                Button("프로젝트 폴더 선택…", action: chooseProject)
-                Text("meeting.py가 있는 프로젝트 폴더를 고르면 그 안의 recordings 폴더에 .m4a로 저장됩니다.")
+                Button("저장 폴더 선택…", action: chooseProject)
+                Text("고른 폴더 안의 recordings에 .m4a로, summaries에 회의록 .md로 저장됩니다.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             if let error = settings.errorMessage {
