@@ -48,16 +48,14 @@ final class SettingsStore {
         watchedApplications.append(app)
     }
 
+    /// 녹음·녹취록·회의록이 모일 폴더. 앱이 하위에 recordings/transcripts/summaries를 만든다.
     func selectProject(at url: URL) throws {
         var isDirectory: ObjCBool = false
-        let script = url.appendingPathComponent("meeting.py")
         guard url.isFileURL,
               FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
-              isDirectory.boolValue,
-              FileManager.default.fileExists(atPath: script.path, isDirectory: &isDirectory),
-              !isDirectory.boolValue else {
+              isDirectory.boolValue else {
             throw CocoaError(.fileReadNoSuchFile, userInfo: [
-                NSLocalizedDescriptionKey: "meeting.py가 있는 프로젝트 폴더를 선택해주세요."
+                NSLocalizedDescriptionKey: "폴더를 선택해주세요."
             ])
         }
         projectRootPath = url.standardizedFileURL.path

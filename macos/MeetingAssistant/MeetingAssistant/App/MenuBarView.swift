@@ -19,7 +19,7 @@ struct MenuBarView: View {
     /// "녹음 시작"이 비활성인 이유. macOS 메뉴 항목은 툴팁이 없어 직접 적어주지 않으면 알 길이 없다.
     private var startBlockReason: String? {
         guard !detection.recorder.isBusy else { return nil }
-        if settings.recordingsURL == nil { return "설정에서 meeting.py가 있는 프로젝트 폴더를 먼저 선택해주세요." }
+        if settings.recordingsURL == nil { return "설정에서 저장 폴더를 먼저 선택해주세요." }
         if !settings.watchedApplications.contains(where: \.isEnabled) {
             return "설정에서 감시할 앱을 먼저 추가해주세요."
         }

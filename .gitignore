@@ -12,3 +12,6 @@ __pycache__/
 # 팀 고유명사가 담긴 로컬 whisper 프롬프트 (meeting.py 참조)
 whisper_prompt.txt
 
+
+# Xcode 개인 설정 — 사람마다 다르다
+xcuserdata/

@@ -15,7 +15,8 @@ final class SettingsStoreTests: XCTestCase {
         let plist = ["CFBundleIdentifier": "example.test", "CFBundleName": "Test App", "CFBundlePackageType": "APPL"]
         try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
             .write(to: contents.appendingPathComponent("Info.plist"))
-        try Data().write(to: root.appendingPathComponent("meeting.py"))
+        let notADirectory = root.appendingPathComponent("file.txt")
+        try Data().write(to: notADirectory)
 
         let store = SettingsStore(defaults: defaults)
         XCTAssertTrue(store.watchedApplications.isEmpty)
@@ -29,7 +30,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertFalse(store.watchedApplications[0].isEnabled)
         XCTAssertThrowsError(try store.addApplication(at: root))
         try store.selectProject(at: root)
-        XCTAssertThrowsError(try store.selectProject(at: contents))
+        XCTAssertThrowsError(try store.selectProject(at: notADirectory))
         store.notificationsEnabled = true
 
         let reloaded = SettingsStore(defaults: defaults)
