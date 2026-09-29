@@ -36,6 +36,9 @@
 		0000000000000000000000B7 /* MeetingAssistant/Transcription/Transcriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000B0 /* MeetingAssistant/Transcription/Transcriber.swift */; };
 		0000000000000000000000B8 /* MeetingAssistant/Integration/ClaudeSummarizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000B5 /* MeetingAssistant/Integration/ClaudeSummarizer.swift */; };
 		0000000000000000000000B9 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0000000000000000000000BA /* WhisperKit */; };
+		0000000000000000000000C1 /* MeetingAssistant/Integration/NotionUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C0 /* MeetingAssistant/Integration/NotionUploader.swift */; };
+		0000000000000000000000C2 /* MeetingAssistant/Integration/NotionUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C0 /* MeetingAssistant/Integration/NotionUploader.swift */; };
+		0000000000000000000000C4 /* Tests/NotionUploaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C3 /* Tests/NotionUploaderTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -60,6 +63,8 @@
 		0000000000000000000000A0 /* MeetingAssistant/Resources/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = MeetingAssistant/Resources/Assets.xcassets; sourceTree = "<group>"; };
 		0000000000000000000000B0 /* MeetingAssistant/Transcription/Transcriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/Transcription/Transcriber.swift; sourceTree = "<group>"; };
 		0000000000000000000000B5 /* MeetingAssistant/Integration/ClaudeSummarizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/Integration/ClaudeSummarizer.swift; sourceTree = "<group>"; };
+		0000000000000000000000C0 /* MeetingAssistant/Integration/NotionUploader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/Integration/NotionUploader.swift; sourceTree = "<group>"; };
+		0000000000000000000000C3 /* Tests/NotionUploaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/NotionUploaderTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,6 +106,7 @@
 				000000000000000000000005 /* MeetingAssistant/Settings/WatchedApplication.swift */,
 				000000000000000000000006 /* MeetingAssistant/Notification/NotificationManager.swift */,
 				000000000000000000000007 /* Tests/SettingsStoreTests.swift */,
+				0000000000000000000000C3 /* Tests/NotionUploaderTests.swift */,
 				000000000000000000000008 /* MeetingAssistant/Info.plist */,
 				000000000000000000000026 /* MeetingAssistant/Detection/AppDetector.swift */,
 				000000000000000000000027 /* MeetingAssistant/Detection/MicrophoneDetector.swift */,
@@ -112,6 +118,7 @@
 				0000000000000000000000A2 /* MeetingAssistant/Integration/MeetingSummaryRunner.swift */,
 				0000000000000000000000B0 /* MeetingAssistant/Transcription/Transcriber.swift */,
 				0000000000000000000000B5 /* MeetingAssistant/Integration/ClaudeSummarizer.swift */,
+				0000000000000000000000C0 /* MeetingAssistant/Integration/NotionUploader.swift */,
 				000000000000000000000033 /* MeetingAssistant/MeetingAssistant.entitlements */,
 				00000000000000000000000B /* Products */,
 			);
@@ -220,6 +227,7 @@
 				0000000000000000000000A3 /* MeetingAssistant/Integration/MeetingSummaryRunner.swift in Sources */,
 				0000000000000000000000B1 /* MeetingAssistant/Transcription/Transcriber.swift in Sources */,
 				0000000000000000000000B6 /* MeetingAssistant/Integration/ClaudeSummarizer.swift in Sources */,
+				0000000000000000000000C1 /* MeetingAssistant/Integration/NotionUploader.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -239,6 +247,8 @@
 				0000000000000000000000A4 /* MeetingAssistant/Integration/MeetingSummaryRunner.swift in Sources */,
 				0000000000000000000000B7 /* MeetingAssistant/Transcription/Transcriber.swift in Sources */,
 				0000000000000000000000B8 /* MeetingAssistant/Integration/ClaudeSummarizer.swift in Sources */,
+				0000000000000000000000C2 /* MeetingAssistant/Integration/NotionUploader.swift in Sources */,
+				0000000000000000000000C4 /* Tests/NotionUploaderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
