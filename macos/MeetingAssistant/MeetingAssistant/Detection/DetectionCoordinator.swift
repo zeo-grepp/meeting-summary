@@ -221,7 +221,8 @@ final class DetectionCoordinator {
     private func handleAction(_ action: String, identifier: String) {
         if identifier == summaryNotificationID {
             summaryNotificationID = nil
-            if action == UNNotificationDefaultActionIdentifier, let url = summaryRunner.lastSummaryURL {
+            if action == UNNotificationDefaultActionIdentifier,
+               let url = summaryRunner.lastNotionURL ?? summaryRunner.lastSummaryURL {
                 NSWorkspace.shared.open(url)
             }
             return
