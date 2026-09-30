@@ -21,8 +21,10 @@ private final class NotificationActionDelegate: NSObject, UNUserNotificationCent
 @MainActor @Observable
 final class NotificationManager {
     static let startAction = "START_RECORDING"
+    static let retryAction = "RETRY_SUMMARY"
     private static let category = "MEETING_CANDIDATE"
     private static let summaryCategory = "SUMMARY_DONE"
+    private static let failureCategory = "SUMMARY_FAILED"
     private let center = UNUserNotificationCenter.current()
     private let actionDelegate = NotificationActionDelegate()
     var onAction: ((String, String) -> Void)?
@@ -45,7 +47,11 @@ final class NotificationManager {
             ], intentIdentifiers: [], options: [.customDismissAction]),
             // 본문을 누르면 회의록을 여는 것 말고 할 일이 없어 액션을 두지 않는다.
             UNNotificationCategory(identifier: Self.summaryCategory, actions: [],
-                                   intentIdentifiers: [], options: [])
+                                   intentIdentifiers: [], options: []),
+            // 실패는 대부분 고친 뒤 다시 돌리면 된다. 메뉴를 열러 가지 않아도 되게 버튼으로 둔다.
+            UNNotificationCategory(identifier: Self.failureCategory, actions: [
+                UNNotificationAction(identifier: Self.retryAction, title: "다시 만들기", options: [.foreground])
+            ], intentIdentifiers: [], options: [])
         ])
     }
 
@@ -84,38 +90,37 @@ final class NotificationManager {
     }
 
     func postCandidate(appName: String) async -> String? {
-        await refresh()
-        guard authorizationStatus == .authorized, alertsEnabled else { return nil }
-        let content = UNMutableNotificationContent()
-        content.title = "회의가 시작되었나요?"
-        content.body = "\(appName) 사용 중 마이크 입력이 감지됐어요.\n지금 녹음을 시작해보세요."
-        content.sound = .default
-        content.categoryIdentifier = Self.category
-        let identifier = UUID().uuidString
-        do {
-            try await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
-            return identifier
-        } catch {
-            errorMessage = "회의 알림을 표시하지 못했습니다: \(error.localizedDescription)"
-            return nil
-        }
+        await post(title: "회의가 시작되었나요?",
+                   body: "\(appName) 사용 중 마이크 입력이 감지됐어요.\n지금 녹음을 시작해보세요.",
+                   category: Self.category, whatFailed: "회의 알림")
     }
 
     /// 작업 완료 알림. "회의 감지 알림" 설정과는 별개이므로 권한만 확인한다.
     func postSummary(title: String) async -> String? {
+        await post(title: "회의록이 준비됐어요", body: "\(title)\n눌러서 열어보세요.",
+                   category: Self.summaryCategory, whatFailed: "회의록 완료 알림")
+    }
+
+    /// 실패는 성공보다 더 알려야 한다. 메뉴를 열어보지 않으면 조용히 지나가기 때문이다.
+    func postFailure(reason: String) async -> String? {
+        await post(title: "회의록을 만들지 못했어요", body: reason,
+                   category: Self.failureCategory, whatFailed: "회의록 실패 알림")
+    }
+
+    private func post(title: String, body: String, category: String, whatFailed: String) async -> String? {
         await refresh()
         guard authorizationStatus == .authorized, alertsEnabled else { return nil }
         let content = UNMutableNotificationContent()
-        content.title = "회의록이 준비됐어요"
-        content.body = "\(title)\n눌러서 열어보세요."
+        content.title = title
+        content.body = body
         content.sound = .default
-        content.categoryIdentifier = Self.summaryCategory
+        content.categoryIdentifier = category
         let identifier = UUID().uuidString
         do {
             try await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
             return identifier
         } catch {
-            errorMessage = "회의록 완료 알림을 표시하지 못했습니다: \(error.localizedDescription)"
+            errorMessage = "\(whatFailed)을 표시하지 못했습니다: \(error.localizedDescription)"
             return nil
         }
     }

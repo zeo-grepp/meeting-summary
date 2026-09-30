@@ -6,9 +6,9 @@ struct MenuBarView: View {
     let detection: DetectionCoordinator
     @Environment(\.openSettings) private var openSettings
 
-    /// 동작 실패 메시지는 출처가 어디든(감지기/레코더/요약기) 한 줄로만 보여준다.
+    /// 그 자리에서 끝나는 동작(감지기/레코더)의 실패. 회의록 실패는 녹음별로 따로 남는다.
     private var alertMessage: String? {
-        detection.actionMessage ?? detection.recorder.errorMessage ?? detection.summaryRunner.errorMessage
+        detection.actionMessage ?? detection.recorder.errorMessage
     }
 
     /// 메뉴 폭은 가장 긴 항목이 정한다. 오류 메시지나 긴 파일명 하나가 화면을 가로지르지 않게 자른다.
@@ -51,11 +51,21 @@ struct MenuBarView: View {
         if let url = detection.summaryRunner.lastSummaryURL {
             Button(short("최근 회의록: \(url.lastPathComponent)")) { NSWorkspace.shared.open(url) }
         }
-        if let audio = detection.summaryRunner.lastAudioURL {
-            Button("회의록 다시 만들기") {
-                detection.summaryRunner.run(audio: audio, projectRoot: settings.projectRootURL)
+        // 실패는 성공할 때까지 남는다. 사유·녹취록·다시 만들기를 한자리에 놓아
+        // 메뉴를 연 사람이 다음에 뭘 할지 바로 고를 수 있게 한다.
+        ForEach(detection.summaryRunner.failures) { failure in
+            Divider()
+            Text(short("⚠️ \(failure.audio.lastPathComponent): \(failure.reason)", 80))
+            if let transcript = failure.transcript {
+                Button("녹취록 열기") { NSWorkspace.shared.open(transcript) }
             }
-            .disabled(detection.summaryRunner.isRunning)
+            Button("회의록 다시 만들기") { detection.retrySummary(audio: failure.audio) }
+                .disabled(detection.summaryRunner.isRunning)
+            Button("이 실패 지우기") { detection.summaryRunner.dismiss(failure) }
+        }
+        if detection.summaryRunner.failures.isEmpty, let audio = detection.summaryRunner.lastAudioURL {
+            Button("회의록 다시 만들기") { detection.retrySummary(audio: audio) }
+                .disabled(detection.summaryRunner.isRunning)
         }
         Divider()
         if let startBlockReason { Text(startBlockReason) }
