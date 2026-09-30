@@ -39,6 +39,7 @@
 		0000000000000000000000C1 /* MeetingAssistant/Integration/NotionUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C0 /* MeetingAssistant/Integration/NotionUploader.swift */; };
 		0000000000000000000000C2 /* MeetingAssistant/Integration/NotionUploader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C0 /* MeetingAssistant/Integration/NotionUploader.swift */; };
 		0000000000000000000000C4 /* Tests/NotionUploaderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C3 /* Tests/NotionUploaderTests.swift */; };
+		0000000000000000000000D6 /* Tests/MeetingSummaryRunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D5 /* Tests/MeetingSummaryRunnerTests.swift */; };
 		0000000000000000000000D4 /* Tests/ClaudeSummarizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D3 /* Tests/ClaudeSummarizerTests.swift */; };
 		0000000000000000000000D1 /* MeetingAssistant/Settings/Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D0 /* MeetingAssistant/Settings/Keychain.swift */; };
 		0000000000000000000000D2 /* MeetingAssistant/Settings/Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000D0 /* MeetingAssistant/Settings/Keychain.swift */; };
@@ -68,6 +69,7 @@
 		0000000000000000000000B5 /* MeetingAssistant/Integration/ClaudeSummarizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/Integration/ClaudeSummarizer.swift; sourceTree = "<group>"; };
 		0000000000000000000000C0 /* MeetingAssistant/Integration/NotionUploader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/Integration/NotionUploader.swift; sourceTree = "<group>"; };
 		0000000000000000000000C3 /* Tests/NotionUploaderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/NotionUploaderTests.swift; sourceTree = "<group>"; };
+		0000000000000000000000D5 /* Tests/MeetingSummaryRunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/MeetingSummaryRunnerTests.swift; sourceTree = "<group>"; };
 		0000000000000000000000D3 /* Tests/ClaudeSummarizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/ClaudeSummarizerTests.swift; sourceTree = "<group>"; };
 		0000000000000000000000D0 /* MeetingAssistant/Settings/Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingAssistant/Settings/Keychain.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -112,6 +114,7 @@
 				000000000000000000000006 /* MeetingAssistant/Notification/NotificationManager.swift */,
 				000000000000000000000007 /* Tests/SettingsStoreTests.swift */,
 				0000000000000000000000C3 /* Tests/NotionUploaderTests.swift */,
+				0000000000000000000000D5 /* Tests/MeetingSummaryRunnerTests.swift */,
 				0000000000000000000000D3 /* Tests/ClaudeSummarizerTests.swift */,
 				000000000000000000000008 /* MeetingAssistant/Info.plist */,
 				000000000000000000000026 /* MeetingAssistant/Detection/AppDetector.swift */,
@@ -258,6 +261,7 @@
 				0000000000000000000000C2 /* MeetingAssistant/Integration/NotionUploader.swift in Sources */,
 				0000000000000000000000D2 /* MeetingAssistant/Settings/Keychain.swift in Sources */,
 				0000000000000000000000C4 /* Tests/NotionUploaderTests.swift in Sources */,
+				0000000000000000000000D6 /* Tests/MeetingSummaryRunnerTests.swift in Sources */,
 				0000000000000000000000D4 /* Tests/ClaudeSummarizerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

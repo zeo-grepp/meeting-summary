@@ -15,6 +15,9 @@ final class DetectionCoordinator {
     private var lastNotificationAt: Date?
     private var activeCandidateID: String?
     private var summaryNotificationID: String?
+    /// 실패 알림과 그 알림이 가리키는 녹음. "다시 만들기" 버튼이 무엇을 다시 만들지 여기서 안다.
+    private var failureNotificationID: String?
+    private var failureAudio: URL?
     /// 지금 마이크를 쓰고 있는 감시 앱들. 새로 들어온 앱을 가려내려고 직전 스냅샷으로 쓴다.
     private var appIDsOnMicrophone: Set<String> = []
     /// 알림을 띄운 대상 앱. 녹음 시작 버튼이 엉뚱한 앱을 녹음하지 않도록 들고 있는다.
@@ -49,6 +52,7 @@ final class DetectionCoordinator {
         appDetector = AppDetector(settings: settings)
         recorder.onSaved = { [weak self] url in self?.handleSavedRecording(url) }
         summaryRunner.onFinish = { [weak self] url in self?.announceSummary(url) }
+        summaryRunner.onFailure = { [weak self] failure in self?.announceFailure(failure) }
     }
 
     /// 저장 직후 한 번만 불린다(정상 종료·강제 중단 공통). 이름을 물어보고 회의록 생성을 시작한다.
@@ -62,6 +66,19 @@ final class DetectionCoordinator {
         Task {
             summaryNotificationID = await notifications.postSummary(title: url.lastPathComponent)
         }
+    }
+
+    private func announceFailure(_ failure: MeetingSummaryRunner.Failure) {
+        Task {
+            // 앞 실패의 배너가 남아 있으면 무엇이 최신인지 헷갈린다.
+            if let id = failureNotificationID { notifications.removeCandidate(id) }
+            failureAudio = failure.audio
+            failureNotificationID = await notifications.postFailure(reason: failure.reason)
+        }
+    }
+
+    func retrySummary(audio: URL) {
+        summaryRunner.run(audio: audio, projectRoot: settings.projectRootURL)
     }
 
     /// 취소하거나 실패해도 파일은 자동 이름으로 이미 그 자리에 있다.
@@ -224,6 +241,14 @@ final class DetectionCoordinator {
                let url = summaryRunner.lastNotionURL ?? summaryRunner.lastSummaryURL {
                 NSWorkspace.shared.open(url)
             }
+            return
+        }
+        if identifier == failureNotificationID {
+            failureNotificationID = nil
+            let audio = failureAudio
+            failureAudio = nil
+            // 본문 클릭은 앱을 여는 것으로 끝낸다. 다시 만들기는 버튼을 눌렀을 때만.
+            if action == NotificationManager.retryAction, let audio { retrySummary(audio: audio) }
             return
         }
         guard identifier == activeCandidateID,

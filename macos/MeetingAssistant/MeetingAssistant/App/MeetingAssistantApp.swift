@@ -26,10 +26,12 @@ final class MeetingAssistantModel {
 /// 형제로 놓여야 둘 다 표시된다.
 private struct MenuBarIcon: View {
     let settings: SettingsStore
+    /// 메뉴를 열지 않아도 보이는 유일한 실패 신호. 알림 권한을 꺼둔 사람에게는 이것뿐이다.
+    let hasFailure: Bool
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        Image(systemName: "person.2.wave.2.fill")
+        Image(systemName: hasFailure ? "exclamationmark.triangle.fill" : "person.2.wave.2.fill")
             .task {
                 guard !settings.isConfigured else { return }
                 NSApp.activate(ignoringOtherApps: true)
@@ -46,7 +48,8 @@ struct MeetingAssistantApp: App {
         MenuBarExtra {
             MenuBarView(settings: model.settings, detection: model.detection)
         } label: {
-            MenuBarIcon(settings: model.settings)
+            MenuBarIcon(settings: model.settings,
+                        hasFailure: !model.detection.summaryRunner.failures.isEmpty)
             // 메뉴가 닫혀 있어도 보이는 유일한 자리다.
             // ⌘Q로 종료할 때 저장이 끝날 때까지 기다리는 동안의 유일한 피드백이기도 하다.
             if model.detection.recorder.isRecording {
