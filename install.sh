@@ -9,10 +9,14 @@ cd "$(dirname "$0")"
     exit 1
 }
 
-command -v ffmpeg >/dev/null || {
-    echo "ffmpeg가 없습니다. 먼저 설치해주세요:  brew install ffmpeg" >&2
-    exit 1
-}
+if ! command -v ffmpeg >/dev/null; then
+    command -v brew >/dev/null || {
+        echo "ffmpeg가 없고 Homebrew도 없습니다. https://brew.sh 에서 Homebrew를 먼저 설치해주세요." >&2
+        exit 1
+    }
+    echo "ffmpeg를 설치합니다…"
+    brew install ffmpeg
+fi
 
 if [ ! -x .venv/bin/python ]; then
     echo "가상환경을 만듭니다…"
