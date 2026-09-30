@@ -26,3 +26,5 @@ ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
 
 codesign --verify --strict "$APP"
 echo "만들어졌습니다: $ZIP"
+# 태그 접두사로 앱 종류를 구분한다. app-v는 Python 없이 도는 쪽(feat-team-deploy)이다.
+echo "올리기:  gh release create script-v$VERSION \"$ZIP\""
