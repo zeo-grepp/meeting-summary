@@ -1,13 +1,16 @@
 import json
+import os
+import re
 import shutil
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from argparse import ArgumentParser
 from datetime import date
 from pathlib import Path
 
 import questionary
-from ollama import chat
 
 
 # ─────────────────────────────────────
@@ -21,7 +24,10 @@ TRANSCRIPTS_DIR = PROJECT_DIR / "transcripts"
 SUMMARIES_DIR = PROJECT_DIR / "summaries"
 
 WHISPER_MODEL = "mlx-community/whisper-large-v3-turbo"
-OLLAMA_MODEL = "gemma4:31b-mlx"
+
+DEFAULT_CLAUDE_BASE_URL = "https://api.anthropic.com"
+DEFAULT_CLAUDE_MODEL = "claude-sonnet-5"
+CLAUDE_MAX_TOKENS = 8192
 
 # 팀마다 자주 나오는 고유명사가 다르다. 사내 용어를 레포에 올리지 않도록
 # whisper_prompt.txt(gitignore됨)를 두면 그 내용이 아래 기본값을 대체한다.
@@ -240,22 +246,34 @@ def transcribe(audio_path: Path) -> Path:
 
 
 # ─────────────────────────────────────
-# Ollama
+# Claude
 # ─────────────────────────────────────
 
-def summarize(transcript: str) -> tuple[str, str]:
-    print()
-    print("[2/2] 회의록을 생성합니다.")
-    print(f"Ollama: {OLLAMA_MODEL}")
-    print()
+def claude_config() -> tuple[str, str, str]:
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("Claude API 키가 없습니다. ANTHROPIC_API_KEY를 설정해주세요.")
 
-    response = chat(
-        model=OLLAMA_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT,
-            },
+    base_url = os.environ.get("ANTHROPIC_BASE_URL", "").strip() or DEFAULT_CLAUDE_BASE_URL
+    model = os.environ.get("ANTHROPIC_MODEL", "").strip() or DEFAULT_CLAUDE_MODEL
+
+    return api_key, base_url, model
+
+
+def messages_url(base_url: str) -> str:
+    """게이트웨이 주소는 이미 /v1로 끝나는 경우가 있다.
+    그대로 붙이면 /v1/v1/messages가 되어 404가 난다."""
+    return f"{re.sub(r'/+(v1/*)?$', '', base_url.strip())}/v1/messages"
+
+
+def summary_request_body(transcript: str, model: str) -> dict:
+    # RESPONSE_FORMAT이 이미 유효한 JSON Schema다. tool 하나를 강제해 그 모양으로 받는다.
+    # temperature는 보내지 않는다 — 최신 모델에서 deprecated이고 보내면 400이다.
+    return {
+        "model": model,
+        "max_tokens": CLAUDE_MAX_TOKENS,
+        "system": SYSTEM_PROMPT,
+        "messages": [
             {
                 "role": "user",
                 "content": (
@@ -265,18 +283,56 @@ def summarize(transcript: str) -> tuple[str, str]:
                 ),
             },
         ],
-        format=RESPONSE_FORMAT,
-        stream=False,
-        think=False,
-        options={
-            "temperature": 0,
+        "tools": [
+            {
+                "name": "write_meeting_notes",
+                "description": "회의 제목과 Markdown 회의록을 기록한다.",
+                "input_schema": RESPONSE_FORMAT,
+            },
+        ],
+        "tool_choice": {"type": "tool", "name": "write_meeting_notes"},
+    }
+
+
+def call_claude(body: dict, api_key: str, base_url: str) -> dict:
+    request = urllib.request.Request(
+        messages_url(base_url),
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "content-type": "application/json",
+            "anthropic-version": "2023-06-01",
+            "x-api-key": api_key,
         },
     )
 
-    result = json.loads(response.message.content)
+    try:
+        with urllib.request.urlopen(request, timeout=600) as response:
+            payload = json.loads(response.read())
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", "replace").strip()
+        raise RuntimeError(f"Claude 요청 실패 ({error.code}): {detail}") from error
+    except OSError as error:
+        raise RuntimeError(f"Claude 서버에 연결하지 못했습니다: {error}") from error
 
-    title = result["title"].strip()
-    content = result["content"].strip()
+    for block in payload.get("content", []):
+        if block.get("type") == "tool_use":
+            return block["input"]
+
+    raise RuntimeError("Claude가 회의록을 반환하지 않았습니다.")
+
+
+def summarize(transcript: str) -> tuple[str, str]:
+    api_key, base_url, model = claude_config()
+
+    print()
+    print("[2/2] 회의록을 생성합니다.")
+    print(f"Claude: {model}")
+    print()
+
+    result = call_claude(summary_request_body(transcript, model), api_key, base_url)
+
+    title = result.get("title", "").strip()
+    content = result.get("content", "").strip()
 
     if not title:
         raise RuntimeError("AI가 회의 제목을 생성하지 못했습니다.")
