@@ -37,8 +37,9 @@ git checkout feat-script-deploy
 
 **3. 메뉴바 앱을 설치합니다.**
 
-받은 `MeetingAssistant-x.y.z.zip`은 메뉴바 앱만 들어 있습니다. 전사와 요약은 1번에서
-clone한 폴더의 Python이 하므로, 둘 다 있어야 합니다. 앱을 `/Applications`에 넣고:
+[Releases](https://github.com/zeo-grepp/meeting-summary/releases/latest)에서 zip을
+내려받습니다. 앱만 들어 있고 전사·요약은 1번에서 clone한 폴더의 Python이 하므로, 둘 다
+있어야 합니다. 풀어서 `/Applications`에 넣고:
 
 ```sh
 xattr -d com.apple.quarantine /Applications/MeetingAssistant.app
