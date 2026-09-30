@@ -12,12 +12,15 @@ Apple Silicon Mac에서만 동작합니다.
 ```sh
 git clone https://github.com/zeo-grepp/meeting-summary.git
 cd meeting-summary
-brew install ffmpeg
+git checkout feat-script-deploy
 ./install.sh
 ```
 
-`install.sh`는 가상환경을 만들고 패키지를 설치한 뒤 `claude_config.json`을 만들어 둡니다.
-몇 분 걸립니다. 이미 있는 것은 건너뛰므로 다시 돌려도 됩니다.
+`git checkout`을 빠뜨리면 안 됩니다. 기본 브랜치(`main`)에는 아직 이 내용이 없습니다.
+
+`install.sh`가 ffmpeg·가상환경·패키지를 설치하고 `claude_config.json`을 만들어 둡니다.
+몇 분 걸립니다. 이미 있는 것은 건너뛰므로 다시 돌려도 됩니다. Homebrew만 미리 있어야
+합니다 — 없으면 [brew.sh](https://brew.sh)를 먼저 봅니다.
 
 **2. `claude_config.json`에 API 키를 채웁니다.**
 
@@ -34,7 +37,8 @@ brew install ffmpeg
 
 **3. 메뉴바 앱을 설치합니다.**
 
-받은 `MeetingAssistant-x.y.z.zip`을 풀어 `MeetingAssistant.app`을 `/Applications`에 넣고:
+받은 `MeetingAssistant-x.y.z.zip`은 메뉴바 앱만 들어 있습니다. 전사와 요약은 1번에서
+clone한 폴더의 Python이 하므로, 둘 다 있어야 합니다. 앱을 `/Applications`에 넣고:
 
 ```sh
 xattr -d com.apple.quarantine /Applications/MeetingAssistant.app
@@ -83,7 +87,7 @@ summaries/    회의록 .md
 | "Claude API 키가 없습니다" | `claude_config.json`의 `api_key`가 비어 있습니다. 녹취록은 `transcripts/`에 남아 있으니 키를 채우고 `summarize.py`로 이어서 하면 됩니다 |
 | "Claude가 회의록을 반환하지 않았습니다" | 녹취록에 회의 내용이 없어 모델이 요약을 거절한 경우입니다. 짧은 테스트 녹음에서 납니다 |
 | 앱이 "손상되었다"며 안 열림 | 3번의 `xattr` 줄을 안 돌렸습니다 |
-| 전사가 실패 | `brew install ffmpeg` |
+| 전사가 실패 | ffmpeg가 없습니다. `./install.sh`를 다시 돌립니다 |
 
 회의록에 넣고 싶은 고유명사가 자꾸 잘못 받아써지면 `whisper_prompt.txt`에 적어 둡니다.
 전사할 때 힌트로 들어갑니다. 이 파일도 커밋되지 않습니다.
