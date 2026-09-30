@@ -12,3 +12,6 @@ __pycache__/
 # 팀 고유명사가 담긴 로컬 whisper 프롬프트 (meeting.py 참조)
 whisper_prompt.txt
 
+# Claude API 키·게이트웨이 주소·모델 이름 (meeting.py 참조)
+claude_config.json
+

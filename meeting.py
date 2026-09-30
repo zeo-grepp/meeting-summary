@@ -25,6 +25,8 @@ SUMMARIES_DIR = PROJECT_DIR / "summaries"
 
 WHISPER_MODEL = "mlx-community/whisper-large-v3-turbo"
 
+# 키·게이트웨이 주소·모델 이름은 레포에 올리지 않는다. whisper_prompt.txt와 같은 방식이다.
+CLAUDE_CONFIG_FILE = PROJECT_DIR / "claude_config.json"
 DEFAULT_CLAUDE_BASE_URL = "https://api.anthropic.com"
 DEFAULT_CLAUDE_MODEL = "claude-sonnet-5"
 CLAUDE_MAX_TOKENS = 8192
@@ -250,14 +252,33 @@ def transcribe(audio_path: Path) -> Path:
 # ─────────────────────────────────────
 
 def claude_config() -> tuple[str, str, str]:
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    """환경변수를 먼저 보고, 없으면 claude_config.json(gitignore됨)을 읽는다.
+    Finder에서 띄운 앱의 환경에는 셸 export가 없어서 파일 경로가 필요하다."""
+    file_values = (
+        json.loads(CLAUDE_CONFIG_FILE.read_text(encoding="utf-8"))
+        if CLAUDE_CONFIG_FILE.exists()
+        else {}
+    )
+
+    def value(env_name: str, file_key: str, default: str = "") -> str:
+        return (
+            os.environ.get(env_name, "").strip()
+            or str(file_values.get(file_key, "")).strip()
+            or default
+        )
+
+    api_key = value("ANTHROPIC_API_KEY", "api_key")
     if not api_key:
-        raise RuntimeError("Claude API 키가 없습니다. ANTHROPIC_API_KEY를 설정해주세요.")
+        raise RuntimeError(
+            "Claude API 키가 없습니다. ANTHROPIC_API_KEY 환경변수를 설정하거나 "
+            f'{CLAUDE_CONFIG_FILE.name}에 {{"api_key": "..."}}를 넣어주세요.'
+        )
 
-    base_url = os.environ.get("ANTHROPIC_BASE_URL", "").strip() or DEFAULT_CLAUDE_BASE_URL
-    model = os.environ.get("ANTHROPIC_MODEL", "").strip() or DEFAULT_CLAUDE_MODEL
-
-    return api_key, base_url, model
+    return (
+        api_key,
+        value("ANTHROPIC_BASE_URL", "base_url", DEFAULT_CLAUDE_BASE_URL),
+        value("ANTHROPIC_MODEL", "model", DEFAULT_CLAUDE_MODEL),
+    )
 
 
 def messages_url(base_url: str) -> str:
