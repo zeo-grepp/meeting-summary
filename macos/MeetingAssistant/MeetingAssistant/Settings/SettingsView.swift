@@ -112,13 +112,13 @@ struct SettingsView: View {
                     Text(error).foregroundStyle(.red).textSelection(.enabled)
                 }
             }
-            // 사용자가 궁금한 건 "어디에 저장되나"지 "프로젝트 루트가 어디냐"가 아니다.
-            Section("녹음 저장 위치") {
-                Text(settings.recordingsURL?.path(percentEncoded: false) ?? "선택하지 않음")
+            // 고르는 것은 프로젝트 폴더인데 저장 경로만 보여주면, 그 경로를 다시 고르게 된다.
+            Section("프로젝트 폴더") {
+                Text(settings.projectRootURL?.path(percentEncoded: false) ?? "선택하지 않음")
                     .textSelection(.enabled)
                     .lineLimit(nil)
                 Button("프로젝트 폴더 선택…", action: chooseProject)
-                Text("meeting.py가 있는 프로젝트 폴더를 고르면 그 안의 recordings 폴더에 .m4a로 저장됩니다.")
+                Text("meeting.py가 있는 폴더를 고릅니다. 녹음은 그 안의 recordings 폴더에 .m4a로 저장됩니다.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             if let error = settings.errorMessage {
