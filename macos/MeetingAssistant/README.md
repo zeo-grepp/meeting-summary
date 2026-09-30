@@ -39,21 +39,33 @@ Xcode에서 돌릴 때는 `Apple Development`로 서명합니다. 팀원에게 �
 ./release.sh
 ```
 
-archive → Developer ID 서명 → 공증 → staple → `.zip`까지 한 번에 합니다. 결과물을 GitHub Releases에 올리고 링크를 보내면 됩니다. 자동 업데이트는 넣지 않습니다.
+`.zip`을 만듭니다. 결과물을 GitHub Releases에 올리고 링크를 보내면 됩니다. 스크립트가 마지막에 `gh release create` 명령을 찍어줍니다. 자동 업데이트는 넣지 않습니다.
 
-미리 준비할 것이 둘 있습니다.
+서명 방식은 키체인에 **Developer ID Application 인증서가 있는지 보고 스크립트가 고릅니다.**
 
-1. **Developer ID Application 인증서.** `Apple Development` 서명본은 그 팀의 프로비저닝이 등록된 맥에서만 열립니다. 이 인증서는 Apple Developer Program의 **Account Holder만** 발급할 수 있습니다 — 아직 준비되지 않았습니다. 진행 상황은 [#6](https://github.com/zeo-grepp/meeting-summary/issues/6)을 봅니다.
-2. **공증 자격증명.** 한 번만 저장해두면 스크립트가 알아서 씁니다.
+| 인증서 | 하는 일 | 받는 사람 |
+|---|---|---|
+| 있음 | archive → Developer ID 서명 → 공증 → staple | `/Applications`에 넣고 열면 끝 |
+| 없음 (지금) | Release 빌드 → ad-hoc 서명 | quarantine을 한 번 떼야 함 (아래) |
 
-   ```sh
-   xcrun notarytool store-credentials meeting-assistant \
-     --apple-id <계정> --team-id <팀 id> --password <앱 전용 암호>
-   ```
+Developer ID 인증서는 Apple Developer Program의 **Account Holder만** 발급할 수 있어 아직 없습니다 ([#6](https://github.com/zeo-grepp/meeting-summary/issues/6)). 그래서 지금은 ad-hoc으로 나갑니다. 인증서가 생기면 스크립트를 고칠 필요 없이 위쪽 경로로 바뀝니다.
+
+ad-hoc으로 받은 사람은 처음 실행 전에 한 번:
+
+```sh
+xattr -d com.apple.quarantine /Applications/MeetingAssistant.app
+```
+
+`Apple Development` 서명은 두 경로 모두에서 쓰지 않습니다 — 그 팀의 프로비저닝이 등록된 맥에서만 열려서 배포에 못 씁니다.
+
+공증 자격증명은 인증서가 생긴 뒤 한 번만 저장해두면 스크립트가 알아서 씁니다.
+
+```sh
+xcrun notarytool store-credentials meeting-assistant \
+  --apple-id <계정> --team-id <팀 id> --password <앱 전용 암호>
+```
 
 팀 id와 프로파일 이름은 `TEAM_ID`, `NOTARY_PROFILE` 환경변수로 덮을 수 있습니다.
-
-받는 사람은 `.zip`을 풀어 `/Applications`에 넣고 열면 됩니다. 설정에서 키를 채우는 것 외에 할 일이 없습니다.
 
 ## 빌드와 테스트
 
