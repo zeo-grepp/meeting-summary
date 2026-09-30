@@ -1,13 +1,16 @@
 import json
+import os
+import re
 import shutil
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from argparse import ArgumentParser
 from datetime import date
 from pathlib import Path
 
 import questionary
-from ollama import chat
 
 
 # ─────────────────────────────────────
@@ -21,7 +24,13 @@ TRANSCRIPTS_DIR = PROJECT_DIR / "transcripts"
 SUMMARIES_DIR = PROJECT_DIR / "summaries"
 
 WHISPER_MODEL = "mlx-community/whisper-large-v3-turbo"
-OLLAMA_MODEL = "gemma4:31b-mlx"
+
+# 키·게이트웨이 주소·모델 이름은 레포에 올리지 않는다. whisper_prompt.txt와 같은 방식이다.
+CLAUDE_CONFIG_FILE = PROJECT_DIR / "claude_config.json"
+DEFAULT_CLAUDE_BASE_URL = "https://api.anthropic.com"
+DEFAULT_CLAUDE_MODEL = "claude-sonnet-5"
+CLAUDE_MAX_TOKENS = 8192
+SUMMARY_TOOL_NAME = "write_meeting_notes"
 
 # 팀마다 자주 나오는 고유명사가 다르다. 사내 용어를 레포에 올리지 않도록
 # whisper_prompt.txt(gitignore됨)를 두면 그 내용이 아래 기본값을 대체한다.
@@ -240,43 +249,141 @@ def transcribe(audio_path: Path) -> Path:
 
 
 # ─────────────────────────────────────
-# Ollama
+# Claude
 # ─────────────────────────────────────
 
-def summarize(transcript: str) -> tuple[str, str]:
-    print()
-    print("[2/2] 회의록을 생성합니다.")
-    print(f"Ollama: {OLLAMA_MODEL}")
-    print()
+def claude_config() -> tuple[str, str, str]:
+    """환경변수를 먼저 보고, 없으면 claude_config.json(gitignore됨)을 읽는다.
+    Finder에서 띄운 앱의 환경에는 셸 export가 없어서 파일 경로가 필요하다."""
+    file_values = (
+        json.loads(CLAUDE_CONFIG_FILE.read_text(encoding="utf-8"))
+        if CLAUDE_CONFIG_FILE.exists()
+        else {}
+    )
 
-    response = chat(
-        model=OLLAMA_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT,
-            },
+    def value(env_name: str, file_key: str, default: str = "") -> str:
+        return (
+            os.environ.get(env_name, "").strip()
+            or str(file_values.get(file_key, "")).strip()
+            or default
+        )
+
+    api_key = value("ANTHROPIC_API_KEY", "api_key")
+    if not api_key:
+        raise RuntimeError(
+            "Claude API 키가 없습니다. ANTHROPIC_API_KEY 환경변수를 설정하거나 "
+            f'{CLAUDE_CONFIG_FILE.name}에 {{"api_key": "..."}}를 넣어주세요.'
+        )
+
+    return (
+        api_key,
+        value("ANTHROPIC_BASE_URL", "base_url", DEFAULT_CLAUDE_BASE_URL),
+        value("ANTHROPIC_MODEL", "model", DEFAULT_CLAUDE_MODEL),
+    )
+
+
+def messages_url(base_url: str) -> str:
+    """게이트웨이 주소는 이미 /v1로 끝나는 경우가 있다.
+    그대로 붙이면 /v1/v1/messages가 되어 404가 난다."""
+    return f"{re.sub(r'/+(v1/*)?$', '', base_url.strip())}/v1/messages"
+
+
+def summary_request_body(transcript: str, model: str) -> dict:
+    # RESPONSE_FORMAT이 이미 유효한 JSON Schema다. tool 하나만 주고 그 모양으로 받는다.
+    # tool_choice로 강제하지 않는다 — 사내 게이트웨이가 type "tool"/"any"를 400으로 막는다.
+    # 그래서 도구를 쓰라고 본문에 적고, 그래도 글로 답하면 call_claude가 JSON을 건져낸다.
+    # temperature는 보내지 않는다 — 최신 모델에서 deprecated이고 보내면 400이다.
+    return {
+        "model": model,
+        "max_tokens": CLAUDE_MAX_TOKENS,
+        "system": SYSTEM_PROMPT,
+        "messages": [
             {
                 "role": "user",
                 "content": (
-                    "다음 녹취록을 바탕으로 "
-                    "회의 제목과 회의록을 작성해줘.\n\n"
+                    "다음 녹취록을 바탕으로 회의 제목과 회의록을 작성해서 "
+                    f"{SUMMARY_TOOL_NAME} 도구로 넘겨줘.\n\n"
                     f"{transcript}"
                 ),
             },
         ],
-        format=RESPONSE_FORMAT,
-        stream=False,
-        think=False,
-        options={
-            "temperature": 0,
+        "tools": [
+            {
+                "name": SUMMARY_TOOL_NAME,
+                "description": "회의 제목과 Markdown 회의록을 기록한다.",
+                "input_schema": RESPONSE_FORMAT,
+            },
+        ],
+    }
+
+
+def post_claude(body: dict, api_key: str, base_url: str) -> dict:
+    request = urllib.request.Request(
+        messages_url(base_url),
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "content-type": "application/json",
+            "anthropic-version": "2023-06-01",
+            "x-api-key": api_key,
         },
     )
 
-    result = json.loads(response.message.content)
+    try:
+        with urllib.request.urlopen(request, timeout=600) as response:
+            payload = json.loads(response.read())
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", "replace").strip()
+        raise RuntimeError(f"Claude 요청 실패 ({error.code}): {detail}") from error
+    except OSError as error:
+        raise RuntimeError(f"Claude 서버에 연결하지 못했습니다: {error}") from error
 
-    title = result["title"].strip()
-    content = result["content"].strip()
+    return payload
+
+
+def read_notes(payload: dict) -> dict | None:
+    blocks = payload.get("content", [])
+
+    for block in blocks:
+        if block.get("type") == "tool_use":
+            return block["input"]
+
+    # 도구를 안 쓰고 글로 답한 경우. 그 안의 JSON만 건져낸다.
+    for block in blocks:
+        text = block.get("text", "")
+        start, end = text.find("{"), text.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                return json.loads(text[start : end + 1])
+            except json.JSONDecodeError:
+                pass
+
+    return None
+
+
+def call_claude(body: dict, api_key: str, base_url: str, attempts: int = 2) -> dict:
+    # tool_choice로 강제할 수 없어서, 가끔 도구를 건너뛰고 글로만 답한다. 그때는 한 번 더 친다.
+    for remaining in reversed(range(attempts)):
+        payload = post_claude(body, api_key, base_url)
+        notes = read_notes(payload)
+        if notes is not None:
+            return notes
+        if not remaining:
+            answer = json.dumps(payload.get("content", []), ensure_ascii=False)[:500]
+            raise RuntimeError(f"Claude가 회의록을 반환하지 않았습니다: {answer}")
+
+
+def summarize(transcript: str) -> tuple[str, str]:
+    api_key, base_url, model = claude_config()
+
+    print()
+    print("[2/2] 회의록을 생성합니다.")
+    print(f"Claude: {model}")
+    print()
+
+    result = call_claude(summary_request_body(transcript, model), api_key, base_url)
+
+    title = result.get("title", "").strip()
+    content = result.get("content", "").strip()
 
     if not title:
         raise RuntimeError("AI가 회의 제목을 생성하지 못했습니다.")

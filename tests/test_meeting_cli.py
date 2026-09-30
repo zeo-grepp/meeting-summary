@@ -1,3 +1,4 @@
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -45,6 +46,41 @@ class AudioArgumentTests(unittest.TestCase):
 
         select.assert_called_once()
         self.assertEqual(transcribe.call_args.args[0], select.return_value)
+
+
+class ClaudeRequestTests(unittest.TestCase):
+    """네트워크는 타지 않는다. 주소 조립과 요청 본문만 본다."""
+
+    def test_messages_path_is_appended_exactly_once(self):
+        for base in [
+            "https://gateway.example.com",
+            "https://gateway.example.com/",
+            "https://gateway.example.com/v1",
+            " https://gateway.example.com/v1/ ",
+        ]:
+            with self.subTest(base=base):
+                self.assertEqual(
+                    meeting.messages_url(base),
+                    "https://gateway.example.com/v1/messages",
+                )
+
+    def test_request_offers_one_tool_without_temperature_or_tool_choice(self):
+        body = meeting.summary_request_body("녹취록", "test-model")
+
+        # 게이트웨이가 둘 다 400으로 막는다.
+        self.assertNotIn("temperature", body)
+        self.assertNotIn("tool_choice", body)
+        self.assertEqual(len(body["tools"]), 1)
+        self.assertEqual(body["tools"][0]["input_schema"], meeting.RESPONSE_FORMAT)
+
+    def test_json_in_plain_text_is_read_when_the_tool_is_skipped(self):
+        payload = {"content": [{"type": "text", "text": '설명\n```json\n{"title": "제목", "content": "본문"}\n```'}]}
+
+        with patch.object(meeting.urllib.request, "urlopen") as urlopen:
+            urlopen.return_value.__enter__.return_value.read.return_value = json.dumps(payload)
+            result = meeting.call_claude({}, "key", "https://gateway.example.com")
+
+        self.assertEqual(result["title"], "제목")
 
 
 if __name__ == "__main__":
