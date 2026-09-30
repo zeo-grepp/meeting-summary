@@ -78,4 +78,5 @@ fi
 
 echo
 echo "완료: $zip"
-echo "올리기:  gh release create v$version \"$zip\""
+# 태그 접두사로 앱 종류를 구분한다. script-v는 Python 파이프라인을 쓰는 쪽이다.
+echo "올리기:  gh release create app-v$version \"$zip\""
