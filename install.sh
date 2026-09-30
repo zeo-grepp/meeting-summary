@@ -28,7 +28,7 @@ echo "패키지를 설치합니다… (처음에는 몇 분 걸립니다)"
 .venv/bin/pip install --quiet -r requirements.txt
 
 if [ ! -f claude_config.json ]; then
-    cp claude_config.sample.json claude_config.json
+    printf '{\n  "api_key": "",\n  "base_url": "",\n  "model": ""\n}\n' > claude_config.json
     echo
     echo "claude_config.json을 만들었습니다. api_key를 채워주세요."
     echo "사내 게이트웨이를 쓴다면 base_url과 model도 채웁니다."

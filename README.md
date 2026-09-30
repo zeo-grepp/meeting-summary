@@ -24,12 +24,6 @@ git checkout feat-script-deploy
 
 **2. `claude_config.json`에 API 키를 채웁니다.**
 
-`install.sh`가 이미 만들어 뒀습니다. 없으면 직접 복사합니다.
-
-```sh
-cp claude_config.sample.json claude_config.json
-```
-
 ```json
 {
   "api_key": "...",
