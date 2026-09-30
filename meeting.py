@@ -30,6 +30,7 @@ CLAUDE_CONFIG_FILE = PROJECT_DIR / "claude_config.json"
 DEFAULT_CLAUDE_BASE_URL = "https://api.anthropic.com"
 DEFAULT_CLAUDE_MODEL = "claude-sonnet-5"
 CLAUDE_MAX_TOKENS = 8192
+SUMMARY_TOOL_NAME = "write_meeting_notes"
 
 # 팀마다 자주 나오는 고유명사가 다르다. 사내 용어를 레포에 올리지 않도록
 # whisper_prompt.txt(gitignore됨)를 두면 그 내용이 아래 기본값을 대체한다.
@@ -288,7 +289,9 @@ def messages_url(base_url: str) -> str:
 
 
 def summary_request_body(transcript: str, model: str) -> dict:
-    # RESPONSE_FORMAT이 이미 유효한 JSON Schema다. tool 하나를 강제해 그 모양으로 받는다.
+    # RESPONSE_FORMAT이 이미 유효한 JSON Schema다. tool 하나만 주고 그 모양으로 받는다.
+    # tool_choice로 강제하지 않는다 — 사내 게이트웨이가 type "tool"/"any"를 400으로 막는다.
+    # 그래서 도구를 쓰라고 본문에 적고, 그래도 글로 답하면 call_claude가 JSON을 건져낸다.
     # temperature는 보내지 않는다 — 최신 모델에서 deprecated이고 보내면 400이다.
     return {
         "model": model,
@@ -298,24 +301,23 @@ def summary_request_body(transcript: str, model: str) -> dict:
             {
                 "role": "user",
                 "content": (
-                    "다음 녹취록을 바탕으로 "
-                    "회의 제목과 회의록을 작성해줘.\n\n"
+                    "다음 녹취록을 바탕으로 회의 제목과 회의록을 작성해서 "
+                    f"{SUMMARY_TOOL_NAME} 도구로 넘겨줘.\n\n"
                     f"{transcript}"
                 ),
             },
         ],
         "tools": [
             {
-                "name": "write_meeting_notes",
+                "name": SUMMARY_TOOL_NAME,
                 "description": "회의 제목과 Markdown 회의록을 기록한다.",
                 "input_schema": RESPONSE_FORMAT,
             },
         ],
-        "tool_choice": {"type": "tool", "name": "write_meeting_notes"},
     }
 
 
-def call_claude(body: dict, api_key: str, base_url: str) -> dict:
+def post_claude(body: dict, api_key: str, base_url: str) -> dict:
     request = urllib.request.Request(
         messages_url(base_url),
         data=json.dumps(body).encode("utf-8"),
@@ -335,11 +337,39 @@ def call_claude(body: dict, api_key: str, base_url: str) -> dict:
     except OSError as error:
         raise RuntimeError(f"Claude 서버에 연결하지 못했습니다: {error}") from error
 
-    for block in payload.get("content", []):
+    return payload
+
+
+def read_notes(payload: dict) -> dict | None:
+    blocks = payload.get("content", [])
+
+    for block in blocks:
         if block.get("type") == "tool_use":
             return block["input"]
 
-    raise RuntimeError("Claude가 회의록을 반환하지 않았습니다.")
+    # 도구를 안 쓰고 글로 답한 경우. 그 안의 JSON만 건져낸다.
+    for block in blocks:
+        text = block.get("text", "")
+        start, end = text.find("{"), text.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                return json.loads(text[start : end + 1])
+            except json.JSONDecodeError:
+                pass
+
+    return None
+
+
+def call_claude(body: dict, api_key: str, base_url: str, attempts: int = 2) -> dict:
+    # tool_choice로 강제할 수 없어서, 가끔 도구를 건너뛰고 글로만 답한다. 그때는 한 번 더 친다.
+    for remaining in reversed(range(attempts)):
+        payload = post_claude(body, api_key, base_url)
+        notes = read_notes(payload)
+        if notes is not None:
+            return notes
+        if not remaining:
+            answer = json.dumps(payload.get("content", []), ensure_ascii=False)[:500]
+            raise RuntimeError(f"Claude가 회의록을 반환하지 않았습니다: {answer}")
 
 
 def summarize(transcript: str) -> tuple[str, str]:
