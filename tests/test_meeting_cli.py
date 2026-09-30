@@ -47,5 +47,30 @@ class AudioArgumentTests(unittest.TestCase):
         self.assertEqual(transcribe.call_args.args[0], select.return_value)
 
 
+class ClaudeRequestTests(unittest.TestCase):
+    """네트워크는 타지 않는다. 주소 조립과 요청 본문만 본다."""
+
+    def test_messages_path_is_appended_exactly_once(self):
+        for base in [
+            "https://gateway.example.com",
+            "https://gateway.example.com/",
+            "https://gateway.example.com/v1",
+            " https://gateway.example.com/v1/ ",
+        ]:
+            with self.subTest(base=base):
+                self.assertEqual(
+                    meeting.messages_url(base),
+                    "https://gateway.example.com/v1/messages",
+                )
+
+    def test_request_forces_the_tool_and_sends_no_temperature(self):
+        body = meeting.summary_request_body("녹취록", "test-model")
+
+        self.assertNotIn("temperature", body)
+        self.assertEqual(body["tool_choice"]["type"], "tool")
+        self.assertEqual(body["tool_choice"]["name"], body["tools"][0]["name"])
+        self.assertEqual(body["tools"][0]["input_schema"], meeting.RESPONSE_FORMAT)
+
+
 if __name__ == "__main__":
     unittest.main()
