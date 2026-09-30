@@ -21,7 +21,13 @@ struct ClaudeSummarizer {
     }
 
     func summarize(transcript: String) async throws -> Summary {
-        try await parse(send(body(transcript: transcript)))
+        // 도구를 강제할 수 없어서 가끔 글로만 답한다. 그때는 한 번 더 친다.
+        let request = body(transcript: transcript)
+        do {
+            return try await parse(send(request))
+        } catch SummarizerError.noNotes {
+            return try await parse(send(request))
+        }
     }
 
     /// 설정 화면의 "연결 테스트". 회의가 끝난 뒤 5분 기다려서 실패를 알게 되는 일을 막는다.
@@ -51,7 +57,10 @@ struct ClaudeSummarizer {
     }
 
     /// Ollama의 format=RESPONSE_FORMAT에 해당하는 것이 Claude에는 없다.
-    /// meeting.py의 RESPONSE_FORMAT을 그대로 tool의 input_schema로 쓰고 그 tool을 강제한다.
+    /// meeting.py의 RESPONSE_FORMAT을 그대로 tool의 input_schema로 쓴다.
+    ///
+    /// tool_choice로 강제하지 않는다 — 사내 게이트웨이가 type "tool"/"any"를 400으로 막는다.
+    /// 그래서 도구를 쓰라고 본문에 적고, 그래도 글로 답하면 parse가 JSON을 건져낸다.
     private func body(transcript: String) -> [String: Any] {
         [
             "model": model,
@@ -75,19 +84,17 @@ struct ClaudeSummarizer {
                     "required": ["title", "content"],
                 ],
             ]],
-            "tool_choice": ["type": "tool", "name": Self.toolName],
             "messages": [[
                 "role": "user",
-                "content": "다음 녹취록을 바탕으로 회의 제목과 회의록을 작성해줘.\n\n\(transcript)",
+                "content": "다음 녹취록을 바탕으로 회의 제목과 회의록을 작성해서 "
+                    + "\(Self.toolName) 도구로 넘겨줘.\n\n\(transcript)",
             ]],
         ]
     }
 
     private func parse(_ data: Data) throws -> Summary {
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        let blocks = json?["content"] as? [[String: Any]] ?? []
-        guard let input = blocks.first(where: { $0["name"] as? String == Self.toolName })?["input"] as? [String: Any] else {
-            throw SummarizerError.badResponse("회의록을 담은 tool_use 블록이 없습니다.")
+        guard let input = Self.notes(in: data) else {
+            throw SummarizerError.noNotes(String(decoding: data.prefix(300), as: UTF8.self))
         }
         let title = (input["title"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let content = (input["content"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -96,15 +103,40 @@ struct ClaudeSummarizer {
         return Summary(title: title, content: content)
     }
 
+    /// 응답에서 회의록을 꺼낸다. 도구를 쓴 응답이 정상이고, 글로만 답한 응답은
+    /// 본문에 적어 보낸 JSON을 건져낸다. 둘 다 아니면 nil — 호출한 쪽이 한 번 재시도한다.
+    static func notes(in data: Data) -> [String: Any]? {
+        let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        let blocks = json?["content"] as? [[String: Any]] ?? []
+
+        if let input = blocks.first(where: { $0["name"] as? String == toolName })?["input"] as? [String: Any] {
+            return input
+        }
+
+        return blocks.compactMap { $0["text"] as? String }
+            .compactMap(embeddedJSON)
+            .first
+    }
+
+    /// 설명과 코드펜스에 둘러싸인 JSON에서 중괄호 사이만 떼어낸다.
+    private static func embeddedJSON(_ text: String) -> [String: Any]? {
+        guard let start = text.firstIndex(of: "{"),
+              let end = text.lastIndex(of: "}"),
+              start < end else { return nil }
+        let object = try? JSONSerialization.jsonObject(with: Data(text[start...end].utf8))
+        return object as? [String: Any]
+    }
+
     private static let toolName = "write_meeting_notes"
 
     enum SummarizerError: LocalizedError {
-        case noAPIKey, badResponse(String)
+        case noAPIKey, badResponse(String), noNotes(String)
 
         var errorDescription: String? {
             switch self {
             case .noAPIKey: "Claude API 키가 설정되지 않았습니다."
             case let .badResponse(detail): "Claude 응답을 읽지 못했습니다 — \(detail)"
+            case let .noNotes(answer): "Claude가 회의록을 반환하지 않았습니다 — \(answer)"
             }
         }
     }
