@@ -12,6 +12,9 @@ __pycache__/
 # 팀 고유명사가 담긴 로컬 whisper 프롬프트 (meeting.py 참조)
 whisper_prompt.txt
 
+# 키·게이트웨이 주소가 담긴 로컬 설정
+claude_config.json
+
 
 # Xcode 개인 설정 — 사람마다 다르다
 xcuserdata/
